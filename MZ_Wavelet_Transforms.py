@@ -101,8 +101,8 @@ def inverse_wavelet_transform(wavelet_transform, series_remaining):
     series_remaining1 = series_remaining1.flatten()
 
     for i in range(scales_number, 0, -1):
-        print("()()()()()() Iteration ()()()()()()")
-        print(i)
+        # print("()()()()()() Iteration ()()()()()()")
+        # print(i)
         number_zeros = 2 ** (i - 1) - 1
         Kz = insert_zeros(K, number_zeros)
         Hz = insert_zeros(H, number_zeros)
@@ -158,9 +158,9 @@ def insert_zeros(original, number_zeros):
 data = [911, 719, 657, 220, 795, 210, 392, 533, 428, 145, 629, 883, 372, 405, 173, 310, 178, 697, 252, 246, 629, 409, 523, 632, 913, 151, 539, 898, 884, 367, 840, 443, 530, 926, 800, 805, 730, 752, 651, 313, 774, 960, 850, 693, 690, 237, 155, 299, 808, 197, 982, 749, 510, 777, 540, 548, 215, 234, 295, 320, 365, 624, 620, 244, 289, 478, 524, 256, 896, 510, 731, 779, 657, 791, 395, 163, 524, 287, 751, 929, 841, 713, 782, 638, 424, 414, 716, 953, 154, 271, 224, 537, 159, 368, 833]
 number_scales = 5
 wavelet_transform, series_remaining = forward_wavelet_transform(number_scales, data)
-print(wavelet_transform)
-print(series_remaining)
+# print(wavelet_transform)
+# print(series_remaining)
 
 # Testing reverse
 reconstructed_time_series = inverse_wavelet_transform(wavelet_transform, series_remaining)
-print(reconstructed_time_series)
+# print(reconstructed_time_series)
