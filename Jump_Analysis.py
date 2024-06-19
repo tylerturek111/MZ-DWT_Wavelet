@@ -3,19 +3,19 @@ import MZ_Wavelet_Transforms
 import pywt
 import numpy as np
 import matplotlib.pyplot as plt
-
+import math
 
 # -------------------------------
 # Defining the parameters
 # -------------------------------
 
-number_pre_jump = 125
+number_pre_jump = 100
 pre_jump_value = 0.123
-number_post_jump = 75
+number_post_jump = 100
 post_jump_value = 0.78
 noise_level = 0.05
 total_number = number_pre_jump + number_post_jump
-number_scales = 3
+number_scales = 5
 jump_threshold = 0.5
 
 
@@ -83,18 +83,57 @@ plt.show()
 # -------------------------------
 # Looking for jumps
 # -------------------------------
-print(wavelet_transform)
-length, scales_number = wavelet_transform.shape
 
 jump_indexes = []
 
-for col in range(scales_number):
+for col in range(number_scales):
     level_indexes = []
     previous_value = 0
-    for row in range(length):
+    for row in range(total_number):
         current_value = wavelet_transform[row, col]
         if (abs(current_value - previous_value) > jump_threshold):
             level_indexes.append(row)
     jump_indexes.append(level_indexes)
 
 print(jump_indexes)
+
+# -------------------------------
+# Computing alpha
+# -------------------------------
+
+alpha_values = np.empty(total_number)
+
+# Creating global x (log of scale values)
+normalized_scale = np.arange(number_scales) + 1
+
+# Method 1 for determing x
+log_normalized_scale = np.log(normalized_scale)
+
+# Method 2 for determing x
+# log_normalized_scale = np.empty(number_scales)
+# for i in range(number_scales):
+#     value = int(normalized_scale[i])
+#     print(2 ** (-1 * value))
+#     log_normalized_scale[i] = math.log(2 ** (-1 * value))
+
+# Computing alpha at each time
+for row in range(total_number):
+    current_row = wavelet_transform[row, :]
+    log_current_row = np.log(np.abs(current_row))
+    alpha = np.polyfit(log_normalized_scale, log_current_row, 1)[0]
+    
+    # Method 1 for alpha
+    alpha_values[row] = alpha
+
+    # Method 2 for alpha
+    # new_alpha = -alpha / math.log(2)
+    # alpha_values[row] = new_alpha
+print(alpha_values)
+
+print("HERE")
+print(alpha_values[99])
+print(alpha_values[100])
+print(alpha_values[101])
+plt.axvline(x = (number_pre_jump / total_number), color = "r")
+plt.plot(time, alpha_values)
+plt.show()
