@@ -1,6 +1,10 @@
 import pywt
 import numpy as np
 
+# ()()()()()()()()()()()()()
+# This file implements the MZ-DWT Wavelet Transform Algorithm in python
+# ()()()()()()()()()()()()()
+
 # (--------------------------------------------)
 # Attempt 1: Creating a wavelet based on the MZ-DWT Wavelet's parameter.
 # (--------------------------------------------)
