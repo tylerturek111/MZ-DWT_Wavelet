@@ -111,7 +111,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             # Calculating the relevent c coefficients
             transform_values = transform_array[:, scale]
             interested_c_indexes = np.arange(singularity_locations[singularity] - cone_slope * scale, singularity_locations[singularity] + cone_slope * scale + 1, 1)
-            c_values[singularity, scale] = np.max(transform_values[interested_c_indexes])
+            c_values[singularity, scale] = max(transform_values[interested_c_indexes], key=lambda x: abs(x))
 
             # Calculating the relevent o coefficients
             # The case of the first region between 0 and the first index
@@ -156,7 +156,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             log_current_o_row = np.log(np.abs(current_o_row))
             o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
             o_alpha_values[singularity + 1] = o_alpha
-        
+
         # Assigning the alpha values to the proper indexes
         # For the c values
         alpha_values[singularity_locations[singularity]] = c_alpha_values[singularity]
@@ -169,3 +169,26 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             alpha_values[singularity_locations[singularity] + 1 : length] = o_alpha_values[singularity + 1]
     
     return(alpha_values)
+
+# -------------------------------
+# packaged_compute_alpha_values_and_indexes
+# Determine location of ginularities and compute alpha using the new optimized
+# method all at once and also generating the indexes with jumps
+# transform_array  : 2-D Numpy Array
+#                    The wavelet transform array
+# cone_slope       : integer
+#                    The slope of the c-region cone
+# jump_threshold   : integer
+#                    The threshold above which to flag jumps
+# alpha_threshold  : integer
+#                    The alpha threshold below which jumps are flagged
+# RETURNS, returns : 1-D Numpy Array
+#                    The alpha values at every time point
+# returns, RETURNS : 1-D Numpy Array
+#                    The indexes of jumps flagged by alpha values
+# -------------------------------
+def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_threshold, alpha_threshold):
+    singularities = compute_jump_locations(transform_array, jump_threshold)
+    alpha_values = efficient_compute_alpha_values(transform_array, cone_slope, singularities)
+    alpha_indexes = compute_alpha_indexes(alpha_values, alpha_threshold)
+    return alpha_values, alpha_indexes

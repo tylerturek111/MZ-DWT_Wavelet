@@ -1,5 +1,4 @@
 import MZ_Wavelet_Transforms
-import Jump_Analysis
 
 import pywt
 import numpy as np
@@ -7,7 +6,7 @@ import matplotlib.pyplot as plt
 import math
 
 # ()()()()()()()()()()()()()
-# This file utilizes the functions in Jump_Analysis to look at jumps
+# This file is used to store un-modified old code that might be needed later
 # ()()()()()()()()()()()()()
 
 # -------------------------------
@@ -18,9 +17,9 @@ import math
 number_pre_jump = 100
 pre_jump_value = 0.563
 number_between_jump = 100
-between_jump_value = 2.583
+between_jump_value = 1.325
 number_post_jump = 100
-post_jump_value = 1.382
+post_jump_value = 0.852
 noise_level = 0.10
 total_number = number_pre_jump + number_between_jump + number_post_jump
 
@@ -98,11 +97,25 @@ plt.grid(True)
 plt.show()
 
 # -------------------------------
-# Looking for jumps based on behavior
+# Looking for jumps
 # -------------------------------
 
+# A function to compute jump locations
+def compute_jump_locations(transform_array):
+    length, scales = transform_array.shape
+
+    # Stores possible jumps for all levels
+    # Function to look for jumps in the wavelet transform
+    jump_indexes = np.array([], int)
+    previous_value = 0
+    for row in range(length):
+        current_value = wavelet_transform[row, 0]
+        if (abs(current_value - previous_value) > jump_threshold):
+            jump_indexes = np.append(jump_indexes, row)
+    return jump_indexes
+
 # Using the compute_jump_locations function to find jumps
-jump_indexes = Jump_Analysis.compute_jump_locations(wavelet_transform, jump_threshold)
+jump_indexes = compute_jump_locations(wavelet_transform)
 
 # Printing the results
 print ("-------------------------------------------------------------")
@@ -112,68 +125,165 @@ print ("-------------------------------------------------------------")
 print("")
 
 # -------------------------------
-# Looking for jumps based on the old alpha values
+# Computing alpha for the entire transform array
 # -------------------------------
 
+# Function to compute alpha at each time point given an array
+def compute_alpha_values(transform_array):
+    length, scales = transform_array.shape
+    alpha_values = np.empty(length)
+
+    # Creating global x (log of scale values)
+    normalized_scale = np.arange(scales) + 1
+    log_normalized_scale = np.log(normalized_scale)
+
+    # Computing alpha at each time value
+    for row in range(length):
+        current_row = transform_array[row, :]
+        log_current_row = np.log(np.abs(current_row))
+        alpha = np.polyfit(log_normalized_scale, log_current_row, 1)[0]
+        alpha_values[row] = alpha
+    return alpha_values
+
+
 # Using the compute_alpha_values function to calcualte alpha for entire data set
-old_alpha_values = Jump_Analysis.compute_alpha_values(wavelet_transform)
+old_alpha_values = compute_alpha_values(wavelet_transform)
 
 # Plotting the alpha values
 plt.axvline(x = ((number_pre_jump - 1) / total_number), color = "r")
 plt.axvline(x = ((number_pre_jump + number_between_jump - 1) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(time, old_alpha_values)
-plt.title('Alpha Values as Calculated via the Old Method')
 plt.show()
 
-old_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(old_alpha_values, alpha_threshold)
+# Function to compute indexes where alpha value is above a certain threshold
+def compute_alpha_indexes(alpha_values, threshold):
+    length = alpha_values.shape[0]
+
+    # Looking for jumps based on alpha values
+    alpha_jump_indexes = np.array([], int)
+    for i in range(length):
+        if (abs(alpha_values[i]) < threshold):
+            alpha_jump_indexes = np.append(alpha_jump_indexes, i)
+    return alpha_jump_indexes
+
+old_alpha_jump_indexes = compute_alpha_indexes(old_alpha_values, alpha_threshold)
 
 print ("-------------------------------------------------------------")
-print ("Indexes Where Jumps are Suspected based on Old Alpha")
+print ("Indexes Where Jumps are Suspected based on Alpha")
 print(old_alpha_jump_indexes)
 print ("-------------------------------------------------------------")
 print("")
 
 # -------------------------------
-# Looking for jumps based on the new alpha values
+# Computing alpha with the new method
 # -------------------------------
 
-# Using the function to calcualte alpha for entire data set
-alpha_values, alpha_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(wavelet_transform, 1, jump_threshold, alpha_threshold)
+# Function to compute alpha in a more efficient manner
+# transform_array: 2-D Numpy Array, The wavelet transform array obtained for the signal
+# cone_slope: integer value, What the slope of the cone dividing the C and O regions should be. I believe the value
+#     is probably just 1, but don't know for sure to I added this variable in. 
+# singularity_locations: 1-D Numpy Array Location of singularities. Paper didn't provide information on how these 
+#     could be found, though some implementation could be included later
+def efficient_compute_alpha_values(transform_array, cone_slope, singularity_locations):
+    # Getting some size data
+    length, scales = transform_array.shape
+    number_singularity = singularity_locations.shape[0]
+
+    # Initializing arrays to store the relevant transform data needed for this implementation
+    c_values = np.empty([number_singularity, scales])
+    o_values = np.empty([number_singularity + 1, scales])
+    o_values_count = np.empty([number_singularity + 1, scales])
+
+    # Computing the coefficients that we actually care about
+    for singularity in range(number_singularity):
+        for scale in range(scales):
+            # Calculating the relevent c coefficients
+            transform_values = transform_array[:, scale]
+            interested_c_indexes = np.arange(singularity_locations[singularity] - cone_slope * scale, singularity_locations[singularity] + cone_slope * scale + 1, 1)
+            c_values[singularity, scale] = np.max(transform_values[interested_c_indexes])
+
+            # Calculating the relevent o coefficients
+            # The case of the first region between 0 and the first index
+            if singularity == 0:
+                interested_o_indexes = np.arange(0, singularity_locations[singularity] - cone_slope * scale, 1)
+                o_values[0, scale] = np.mean(transform_values[interested_o_indexes])
+            # All other intermediate regions
+            else:
+                interested_o_indexes = np.arange(singularity_locations[singularity - 1] + cone_slope * scale + 1, singularity_locations[singularity] - cone_slope * scale + 1)
+                o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
+            # The last region between the last index and the end
+            if singularity == (number_singularity - 1):
+                interested_o_indexes2 = np.arange(singularity_locations[singularity] + cone_slope * scale + 1, length, 1)
+                o_values[singularity + 1, scale] = np.mean(transform_values[interested_o_indexes2])
+
+    # Creating global x (log of scale values)
+    normalized_scale = np.arange(scales) + 1
+    log_normalized_scale = np.log(normalized_scale)
+
+    # Now computing the alphas with these reduced coefficients
+    # Initializing arrays to store values
+    c_alpha_values = np.empty(number_singularity)
+    o_alpha_values = np.empty(number_singularity + 1)
+    alpha_values = np.empty(length)
+
+    # Calculating alpha values
+    for singularity in range(number_singularity):
+        # Computing the c alpha values
+        current_c_row = c_values[singularity, :]
+        log_current_c_row = np.log(np.abs(current_c_row))
+        c_alpha = np.polyfit(log_normalized_scale, log_current_c_row, 1)[0]
+        c_alpha_values[singularity] = c_alpha
+
+        # Computing the o alpha values
+        current_o_row = o_values[singularity, :]
+        log_current_o_row = np.log(np.abs(current_o_row))
+        o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
+        o_alpha_values[singularity] = o_alpha
+        # Computing the o alpha values for the last region
+        if singularity == (number_singularity - 1):
+            current_o_row = o_values[singularity + 1, :]
+            log_current_o_row = np.log(np.abs(current_o_row))
+            o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
+            o_alpha_values[singularity + 1] = o_alpha
+        
+        # Assigning the alpha values to the proper indexes
+        # For the c values
+        alpha_values[singularity_locations[singularity]] = c_alpha_values[singularity]
+        # For the o values
+        if singularity == 0:
+            alpha_values[0 : singularity_locations[singularity]] = o_alpha_values[singularity]
+        else:
+            alpha_values[singularity_locations[singularity - 1] + 1 : singularity_locations[singularity]] = o_alpha_values[singularity]
+        if singularity == (number_singularity - 1):
+            alpha_values[singularity_locations[singularity] + 1 : length] = o_alpha_values[singularity + 1]
+
+    return(alpha_values)
+
+# Using the efficient_compute_alpha_values function to calcualte alpha for entire data set
+alpha_values = efficient_compute_alpha_values(wavelet_transform, 1, np.array([99, 199]))
 
 # Plotting the new alpha values
 plt.axvline(x = ((number_pre_jump - 1) / total_number), color = "r")
 plt.axvline(x = ((number_pre_jump + number_between_jump - 1) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(time, alpha_values)
-plt.title('Alpha Values as Calculated via the New Method')
 plt.show()
 
-print ("-------------------------------------------------------------")
-print ("Indexes Where Jumps are Suspected based on New Alpha")
-print(alpha_jump_indexes)
-print ("-------------------------------------------------------------")
-print("")
+alpha_jump_indexes = compute_alpha_indexes(alpha_values, alpha_threshold)
 
 # -------------------------------
 # Comparing old and new alpha values at the points of interest
 # -------------------------------
-
 print ("-------------------------------------------------------------")
-print("At first jump (99), old alpha is", old_alpha_values[number_pre_jump - 1])
-print("At first jump (99), new alpha is", alpha_values[number_pre_jump - 1])
-print("At second jump (199), old alpha is", old_alpha_values[number_pre_jump + number_between_jump- 1])
-print("At second jump (199), new alpha is", alpha_values[number_pre_jump + number_between_jump - 1])
-print ("-------------------------------------------------------------")
-print("")
+print("At first jump, old alpha is", old_alpha_values[number_pre_jump - 1])
+print("At first jump, new alpha is", alpha_values[number_pre_jump - 1])
+print("At second jump, old alpha is", old_alpha_values[number_pre_jump + number_between_jump- 1])
+print("At second jump, new alpha is", alpha_values[number_pre_jump + number_between_jump - 1])
 
 # -------------------------------
-# Looking at ways to better compute alphas that matter
+# Possible jumps based on both behavior and alpha
 # -------------------------------
-
-#
-# Method 0: Possible jumps based on both behavior and alpha
-#
 
 behavior_jumps_indexes = np.array(jump_indexes)
 combined = np.intersect1d(alpha_jump_indexes, jump_indexes)
@@ -183,6 +293,10 @@ print ("Indexes Where Jumps are Suspected based on Beahvior AND Alpha")
 print(combined)
 print ("-------------------------------------------------------------")
 print("")
+
+# -------------------------------
+# Looking at ways to better compute alphas that matter
+# -------------------------------
 
 #
 # Method 1: Compressing the wavelet transform matrix and comparing it to the originally determined alpha values
@@ -203,7 +317,7 @@ for col in range(number_scales):
                 current_count = wavelet_transform[i, col]
 
 # Computing alpha values of the compressed transform data
-compressed_alpha_values, compressed_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(compressed_wavelet_transform, 1, jump_threshold, alpha_threshold)
+compressed_alpha_values = compute_alpha_values(compressed_wavelet_transform)
 
 # Plotting the alpha values
 if total_number % 5 == 0:
@@ -211,17 +325,15 @@ if total_number % 5 == 0:
 else: 
     compression_time = np.linspace(0, 1, int(total_number / compression_threshold) + 1, endpoint=False)
 plt.axvline(x = ((number_pre_jump - compression_threshold) / total_number), color = "r")
-plt.axvline(x = ((number_pre_jump + number_between_jump - compression_threshold) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(compression_time, compressed_alpha_values)
-plt.title('Alpha Values as Calculated via the Old Method and Compressing the Wavelet Transform')
 plt.show()
 
 # Comparing the compressed alpha values with non-compressed alpha values in order to
 # determine which alpha values are based truley on sizable jumps instead of random
 # noise fluctuations
 expanded_alpha_values =  np.repeat(compressed_alpha_values, compression_threshold)
-expanded_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(expanded_alpha_values, alpha_threshold)
+expanded_alpha_jump_indexes = compute_alpha_indexes(expanded_alpha_values, alpha_threshold)
 method1_indexes = np.intersect1d(alpha_jump_indexes, expanded_alpha_jump_indexes)
 
 # Attaching the original alpha values to the indexes we care about
@@ -233,10 +345,6 @@ print ("-------------------------------------------------------------")
 print ("Indexes Where Jumps are Suspected based on Alphas from Transform Compression")
 print(method1_indexes)
 print(method1_indexes_alpha)
-print("----------")
-print("Initially flagged singularities", compressed_jump_indexes)
-print("Ultimately flagged locations", Jump_Analysis.compute_alpha_indexes(compressed_alpha_values, alpha_threshold))
-print("Remember, data is compressed by a factor of", compression_threshold)
 print ("-------------------------------------------------------------")
 print("")
 
@@ -251,24 +359,22 @@ for i in range(total_number):
         compressed_data = np.append(compressed_data, original_data[i])
 
 # Getting the wavelet transform for our compressed data
-compressed2_wavelet_transform, time_series = MZ_Wavelet_Transforms.forward_wavelet_transform(number_scales, compressed_data)
+compressed_wavelet_transform, time_series = MZ_Wavelet_Transforms.forward_wavelet_transform(number_scales, compressed_data)
 
 # Generating alpha values for our compressed data
-compressed2_alpha_values, compressed2_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(compressed2_wavelet_transform, 1, jump_threshold, alpha_threshold)
+compressed2_alpha_values = compute_alpha_values(compressed_wavelet_transform)
 
 # Plotting the alpha values
 plt.axvline(x = ((number_pre_jump - compression_threshold) / total_number), color = "r")
-plt.axvline(x = ((number_pre_jump + number_between_jump - compression_threshold) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(compression_time, compressed2_alpha_values)
-plt.title('Alpha Values as Calculated via the Old Method and Compressing the Original Data')
 plt.show()
 
 # Comparing the compressed alpha values with non-compressed alpha values in order to
 # determine which alpha values are based truley on sizable jumps instead of random
 # noise fluctuations
 expanded2_alpha_values =  np.repeat(compressed2_alpha_values, compression_threshold)
-expanded2_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(expanded2_alpha_values, alpha_threshold)
+expanded2_alpha_jump_indexes = compute_alpha_indexes(expanded2_alpha_values, alpha_threshold)
 method2_indexes = np.intersect1d(alpha_jump_indexes, expanded2_alpha_jump_indexes)
 
 # Attaching the original alpha values to the indexes we care about
@@ -280,10 +386,6 @@ print ("-------------------------------------------------------------")
 print ("Indexes Where Jumps are Suspected based on Alphas from Data Compression")
 print(method2_indexes)
 print(method2_indexes_alpha)
-print("----------")
-print("Initially flagged singularities", compressed2_jump_indexes)
-print("Ultimately flagged locations", Jump_Analysis.compute_alpha_indexes(compressed2_alpha_values, alpha_threshold))
-print("Remember, data is compressed by a factor of", compression_threshold)
 print ("-------------------------------------------------------------")
 print("")
 
