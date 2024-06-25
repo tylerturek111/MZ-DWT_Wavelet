@@ -110,21 +110,21 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
         for scale in range(scales):
             # Calculating the relevent c coefficients
             transform_values = transform_array[:, scale]
-            interested_c_indexes = np.arange(singularity_locations[singularity] - cone_slope * scale, singularity_locations[singularity] + cone_slope * scale + 1, 1)
+            interested_c_indexes = np.arange(max(0, singularity_locations[singularity] - cone_slope * scale), min(singularity_locations[singularity] + cone_slope * scale + 1, length), 1)
             c_values[singularity, scale] = max(transform_values[interested_c_indexes], key=lambda x: abs(x))
 
             # Calculating the relevent o coefficients
             # The case of the first region between 0 and the first index
             if singularity == 0:
-                interested_o_indexes = np.arange(0, singularity_locations[singularity] - cone_slope * scale, 1)
+                interested_o_indexes = np.arange(0, min(singularity_locations[singularity] - cone_slope * scale, length), 1)
                 o_values[0, scale] = np.mean(transform_values[interested_o_indexes])
             # All other intermediate regions
             else:
-                interested_o_indexes = np.arange(singularity_locations[singularity - 1] + cone_slope * scale + 1, singularity_locations[singularity] - cone_slope * scale + 1)
+                interested_o_indexes = np.arange(max(singularity_locations[singularity - 1] + cone_slope * scale + 1, 0), min(singularity_locations[singularity] - cone_slope * scale + 1, length), 1)
                 o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
             # The last region between the last index and the end
             if singularity == (number_singularity - 1):
-                interested_o_indexes2 = np.arange(singularity_locations[singularity] + cone_slope * scale + 1, length, 1)
+                interested_o_indexes2 = np.arange(max(singularity_locations[singularity] + cone_slope * scale + 1, 0), length, 1)
                 o_values[singularity + 1, scale] = np.mean(transform_values[interested_o_indexes2])
 
     # Creating global x (log of scale values)
@@ -187,6 +187,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
 # returns, RETURNS : 1-D Numpy Array
 #                    The indexes of jumps flagged by alpha values
 # -------------------------------
+
 def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_threshold, alpha_threshold):
     singularities = compute_jump_locations(transform_array, jump_threshold)
     alpha_values = efficient_compute_alpha_values(transform_array, cone_slope, singularities)

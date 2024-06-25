@@ -14,6 +14,11 @@ import math
 # Defining the parameters
 # -------------------------------
 
+# Parameters for analyzing the jump
+jump_threshold = 0.30
+alpha_threshold = 0.2
+compression_threshold = 5
+
 # Parameters for the "bad" data
 number_pre_jump = 100
 pre_jump_value = 0.563
@@ -21,16 +26,11 @@ number_between_jump = 100
 between_jump_value = 2.583
 number_post_jump = 100
 post_jump_value = 1.382
-noise_level = 0.10
+noise_level = 0.05
 total_number = number_pre_jump + number_between_jump + number_post_jump
 
 # Parameters for number of scales for the wavelet transform
 number_scales = 3
-
-# Parameters for analyzing the jump
-jump_threshold = 0.5
-alpha_threshold = 0.25
-compression_threshold = 5
 
 # -------------------------------
 # Creating the data
@@ -214,7 +214,7 @@ plt.axvline(x = ((number_pre_jump - compression_threshold) / total_number), colo
 plt.axvline(x = ((number_pre_jump + number_between_jump - compression_threshold) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(compression_time, compressed_alpha_values)
-plt.title('Alpha Values as Calculated via the Old Method and Compressing the Wavelet Transform')
+plt.title('Alpha Values as Calculated via the New Method and Compressing the Wavelet Transform')
 plt.show()
 
 # Comparing the compressed alpha values with non-compressed alpha values in order to
@@ -261,7 +261,7 @@ plt.axvline(x = ((number_pre_jump - compression_threshold) / total_number), colo
 plt.axvline(x = ((number_pre_jump + number_between_jump - compression_threshold) / total_number), color = "r")
 plt.axhline(y = 0, color = 'r')
 plt.plot(compression_time, compressed2_alpha_values)
-plt.title('Alpha Values as Calculated via the Old Method and Compressing the Original Data')
+plt.title('Alpha Values as Calculated via the New Method and Compressing the Original Data')
 plt.show()
 
 # Comparing the compressed alpha values with non-compressed alpha values in order to
