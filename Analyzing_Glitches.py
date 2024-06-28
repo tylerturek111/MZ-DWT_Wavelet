@@ -155,11 +155,13 @@ def print_colored(text, color):
 #region Looking for Glitches
 # -------------------------------
 
+alpha_values, alpha_jump_indexes = Singularity_Analysis.packaged_compute_alpha_values_and_indexes(wavelet_transform, 1, jump_threshold, alpha_threshold)
+
 # Start time
 glitch_start_time = time.time()
 
 # Using compute_glitch_locations to calculate the location and size of glitches
-glitch_locations, glitch_sizes = Singularity_Analysis.compute_glitch_locations(wavelet_transform, jump_threshold, alpha_threshold, glitch_treshold)
+glitch_locations, glitch_sizes = Singularity_Analysis.compute_glitch_locations(wavelet_transform, alpha_values, alpha_jump_indexes, glitch_treshold)
 
 # End time
 glitch_run_time = time.time() - glitch_start_time

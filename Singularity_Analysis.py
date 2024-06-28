@@ -230,10 +230,10 @@ def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_
 # they are actually glitches
 # transform_array  : 2-D Numpy Array
 #                    The wavelet transform array
-# jump_threshold   : integer
-#                    The threshold above which to flag jumps
-# alpha_threshold  : integer
-#                    The alpha threshold below which jumps are flagged
+# alpha_values     : integer
+#                    The alpha values at every time point
+# alpha_indexes    : integer
+#                    The indexes of jumps flagged by alpha values
 # glitch_threshold : integer
 #                  : The maximum wavelet transform deviation from the left to right of a glitch
 # RETURNS, returns : 1-D Numpy Array of integers
@@ -242,10 +242,7 @@ def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_
 #                    The size of suspected glitches
 # -------------------------------
 
-def compute_glitch_locations(transform_array, jump_threshold, alpha_threshold, glitch_threshold):
-    # Calculating alpha values
-    alpha_values, alpha_indexes = packaged_compute_alpha_values_and_indexes(transform_array, 1, jump_threshold, alpha_threshold)
-
+def compute_glitch_locations(transform_array, alpha_values, alpha_indexes, glitch_threshold):
     # Get the start and end location of each NaN cluster
     nan_locations = np.where(np.isnan(alpha_values))[0]
     nan_clusters = np.split(nan_locations, np.where(np.diff(nan_locations) != 1)[0] + 1)
