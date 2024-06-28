@@ -4,6 +4,7 @@ import pywt
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import statistics
 import time
 
 # ()()()()()()()()()()()()()
@@ -17,7 +18,7 @@ import time
 #                   The wavelet transform array
 # threshold       : integer
 #                   The threshold above which to flag jumps
-# Returns         : 1-D Numpy Array
+# Returns         : 1-D Numpy Array of integers
 #                   The indexes of jumps flagged by behavior
 # -------------------------------
 
@@ -26,7 +27,8 @@ def compute_jump_locations(transform_array, threshold):
     differences = np.abs(np.diff(transform_array[:, 0]))
     
     # Find the indices where the difference exceeds the jump threshold
-    jump_indexes = np.where(differences > threshold)[0] + 1
+    raw_jump_indexes = np.where(differences > threshold)[0] + 1
+    jump_indexes = raw_jump_indexes[::2]
     
     return jump_indexes
 
@@ -35,7 +37,7 @@ def compute_jump_locations(transform_array, threshold):
 # Computing alpha for the entire transform array using the old method
 # transform_array : 2-D Numpy Array
 #                   The wavelet transform array
-# Returns         : 1-D Numpy Array
+# Returns         : 1-D Numpy Array of floats
 #                   The alpha values at every time point
 # -------------------------------
 
@@ -63,7 +65,7 @@ def compute_alpha_values(transform_array):
 #                The alpha values at every time point
 # threshold    : integer
 #                The alpha threshold below which jumps are flagged
-# Returns      : 1-D Numpy Array
+# Returns      : 1-D Numpy Array of integers
 #                The indexes of jumps flagged by alpha values
 # -------------------------------
 
@@ -81,7 +83,7 @@ def compute_alpha_indexes(alpha_values, threshold):
 #                         The slope of the c-region cone
 # singularity_locations : 1-D Numpy Array
 #                         The location of singularities that define the c regions
-# Returns               : 1-D Numpy Array
+# Returns               : 1-D Numpy Array of floats
 #                         The alpha values at every time point
 # -------------------------------
 
@@ -177,10 +179,9 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
 
     return(alpha_values)
 
-
 # -------------------------------
 # packaged_compute_alpha_values_and_indexes
-# Determine location of ginularities and compute alpha using the new optimized
+# Determine location of jump singularities and compute alpha using the new optimized
 # method all at once and also generating the indexes with jumps
 # transform_array  : 2-D Numpy Array
 #                    The wavelet transform array
@@ -190,9 +191,9 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
 #                    The threshold above which to flag jumps
 # alpha_threshold  : integer
 #                    The alpha threshold below which jumps are flagged
-# RETURNS, returns : 1-D Numpy Array
+# RETURNS, returns : 1-D Numpy Array of floats
 #                    The alpha values at every time point
-# returns, RETURNS : 1-D Numpy Array
+# returns, RETURNS : 1-D Numpy Array of integers
 #                    The indexes of jumps flagged by alpha values
 # -------------------------------
 
@@ -220,19 +221,61 @@ def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_
     print("")
     return alpha_values, alpha_indexes
 
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
-# BREAK BREAK BREAK BREAK BREAK
+# -------------------------------
+# compute_glitch_locations
+# Determine location of glitch sinularities and compute their size
+# This method exploits a property of the new alpha method in which nearby jumps result in intermediate alpha
+# values being recorded as NaN, allowing us to locate nearby jumps and from that determine whether or not
+# they are actually glitches
+# transform_array  : 2-D Numpy Array
+#                    The wavelet transform array
+# jump_threshold   : integer
+#                    The threshold above which to flag jumps
+# alpha_threshold  : integer
+#                    The alpha threshold below which jumps are flagged
+# glitch_threshold : integer
+#                  : The maximum wavelet transform deviation from the left to right of a glitch
+# RETURNS, returns : 1-D Numpy Array of integers
+#                    The location of suspected glitches
+# returns, RETURNS : 1-D Numpy Array of integers
+#                    The size of suspected glitches
+# -------------------------------
+
+def compute_glitch_locations(transform_array, jump_threshold, alpha_threshold, glitch_threshold):
+    # Calculating alpha values
+    alpha_values, alpha_indexes = packaged_compute_alpha_values_and_indexes(transform_array, 1, jump_threshold, alpha_threshold)
+
+    # Get the start and end location of each NaN cluster
+    nan_locations = np.where(np.isnan(alpha_values))[0]
+    nan_clusters = np.split(nan_locations, np.where(np.diff(nan_locations) != 1)[0] + 1)
+    nan_cluster_locations = np.array([(cluster[0], cluster[-1]) for cluster in nan_clusters])
+    number_clusters, _ = nan_cluster_locations.shape
+
+    # Initializing the array to put result, with each glitch location being referenced as (glitch location, glitch size)
+    glitch_locations = np.empty((0,))
+    glitch_sizes = np.empty((0, ))
+
+    # Looking at each NaN cluster and determining if it is truly a glitch
+    for i in range(number_clusters):
+        # Calculating some relevant information
+        start_index = nan_cluster_locations[i, 0]
+        end_index = nan_cluster_locations[i, 1]
+        left_value = transform_array[(start_index - 2), 0]
+        right_value = transform_array[(end_index + 2), 0]
+        medium_value = transform_array[(math.floor(np.mean(nan_cluster_locations[i, :])), 0)]
+
+        # Determing if the NaN cluster is truly a glitch and computing its size
+        if abs(left_value - right_value) < glitch_threshold:
+            glitch_size = 0
+            nan_size = end_index - start_index + 1
+            if nan_size == 1:
+                if abs(alpha_values[start_index - 1] - alpha_values[end_index + 1]) > 0.1:
+                    glitch_size = 1
+                else:
+                    glitch_size = 2
+            else:
+                glitch_size = nan_size + 1
+            glitch_locations = np.append(glitch_locations, int((start_index - 1)))
+            glitch_sizes = np.append(glitch_sizes, int(glitch_size))
+
+    return glitch_locations, glitch_sizes

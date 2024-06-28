@@ -1,5 +1,5 @@
 import MZ_Wavelet_Transforms
-import Jump_Analysis
+import Singularity_Analysis
 
 import pywt
 import numpy as np
@@ -8,7 +8,7 @@ import math
 import time
 
 # ()()()()()()()()()()()()()
-# This file utilizes the functions in Jump_Analysis to look at jumps
+# This file utilizes the functions in Singularity_Analysis to look at "jumps"
 # ()()()()()()()()()()()()()
 
 # -------------------------------
@@ -16,16 +16,16 @@ import time
 # -------------------------------
 
 # Parameters for analyzing the jump
-jump_threshold = 0.75
-alpha_threshold = 0.20
+jump_threshold = 0.05
+alpha_threshold = 0.2
 compression_threshold = 5
 
 # Parameters for the "bad" data
-number_pre_jump = 100000
+number_pre_jump = 100
 pre_jump_value = 0.563
-number_between_jump = 100000
+number_between_jump = 100
 between_jump_value = 2.583
-number_post_jump = 100000
+number_post_jump = 100
 post_jump_value = 0.382
 noise_level = 0.05
 total_number = number_pre_jump + number_between_jump + number_post_jump
@@ -38,15 +38,9 @@ number_scales = 3
 # -------------------------------
 
 # Creating the "bad" data set
-pre_jump = np.empty(number_pre_jump)
-for i in range(number_pre_jump):
-    pre_jump[i] = pre_jump_value
-between_jump = np.empty(number_between_jump)
-for i in range(number_between_jump):
-    between_jump[i] = between_jump_value
-post_jump = np.empty(number_post_jump)
-for i in range(number_post_jump):
-    post_jump[i] = post_jump_value
+pre_jump = np.full(number_pre_jump, pre_jump_value)
+between_jump = np.full(number_between_jump, between_jump_value)
+post_jump = np.full(number_post_jump, number_post_jump)
 smooth_original_data_half = np.concatenate((pre_jump, between_jump))
 smooth_original_data = np.concatenate((smooth_original_data_half, post_jump))
 original_data = smooth_original_data + noise_level * np.random.randn(total_number)
@@ -128,7 +122,7 @@ def print_colored(text, color):
 jump_method_start_time = time.time()
 
 # Using the compute_jump_locations function to find jumps
-jump_indexes = Jump_Analysis.compute_jump_locations(wavelet_transform, jump_threshold)
+jump_indexes = Singularity_Analysis.compute_jump_locations(wavelet_transform, jump_threshold)
 
 # Time to run
 jump_method_run_time = time.time() - jump_method_start_time
@@ -152,10 +146,10 @@ print("")
 old_method_start_time = time.time()
 
 # Using the compute_alpha_values function to calcualte alpha for entire data set
-old_alpha_values = Jump_Analysis.compute_alpha_values(wavelet_transform)
+old_alpha_values = Singularity_Analysis.compute_alpha_values(wavelet_transform)
 
 # Getting the indexes
-old_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(old_alpha_values, alpha_threshold)
+old_alpha_jump_indexes = Singularity_Analysis.compute_alpha_indexes(old_alpha_values, alpha_threshold)
 
 # Time to run
 old_method_run_time = time.time() - old_method_start_time
@@ -186,7 +180,7 @@ print("")
 new_method_start_time = time.time()
 
 # Using the function to calcualte alpha for entire data set
-alpha_values, alpha_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(wavelet_transform, 1, jump_threshold, alpha_threshold)
+alpha_values, alpha_jump_indexes = Singularity_Analysis.packaged_compute_alpha_values_and_indexes(wavelet_transform, 1, jump_threshold, alpha_threshold)
 
 # Time to run
 new_method_run_time = time.time() - new_method_start_time
@@ -208,6 +202,9 @@ print(alpha_jump_indexes)
 print_colored(new_method_run_time_string, "green")
 print("-------------------------------------------------------------")
 print("")
+
+for i in range(total_number):
+    print(i, alpha_values[i])
 
 # -------------------------------
 # Comparing old and new alpha values at the points of interest
@@ -257,7 +254,7 @@ print("")
 #                 current_count = wavelet_transform[i, col]
 
 # # Computing alpha values of the compressed transform data
-# compressed_alpha_values, compressed_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(compressed_wavelet_transform, 1, jump_threshold, alpha_threshold)
+# compressed_alpha_values, compressed_jump_indexes = Singularity_Analysis.packaged_compute_alpha_values_and_indexes(compressed_wavelet_transform, 1, jump_threshold, alpha_threshold)
 
 # # Plotting the alpha values
 # if total_number % 5 == 0:
@@ -275,7 +272,7 @@ print("")
 # # determine which alpha values are based truley on sizable jumps instead of random
 # # noise fluctuations
 # expanded_alpha_values =  np.repeat(compressed_alpha_values, compression_threshold)
-# expanded_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(expanded_alpha_values, alpha_threshold)
+# expanded_alpha_jump_indexes = Singularity_Analysis.compute_alpha_indexes(expanded_alpha_values, alpha_threshold)
 # method1_indexes = np.intersect1d(alpha_jump_indexes, expanded_alpha_jump_indexes)
 
 # # Attaching the original alpha values to the indexes we care about
@@ -289,7 +286,7 @@ print("")
 # print(method1_indexes_alpha)
 # print("----------")
 # print("Initially flagged singularities", compressed_jump_indexes)
-# print("Ultimately flagged locations", Jump_Analysis.compute_alpha_indexes(compressed_alpha_values, alpha_threshold))
+# print("Ultimately flagged locations", Singularity_Analysis.compute_alpha_indexes(compressed_alpha_values, alpha_threshold))
 # print("Remember, data is compressed by a factor of", compression_threshold)
 # print ("-------------------------------------------------------------")
 # print("")
@@ -308,7 +305,7 @@ print("")
 # compressed2_wavelet_transform, time_series = MZ_Wavelet_Transforms.forward_wavelet_transform(number_scales, compressed_data)
 
 # # Generating alpha values for our compressed data
-# compressed2_alpha_values, compressed2_jump_indexes = Jump_Analysis.packaged_compute_alpha_values_and_indexes(compressed2_wavelet_transform, 1, jump_threshold, alpha_threshold)
+# compressed2_alpha_values, compressed2_jump_indexes = Singularity_Analysis.packaged_compute_alpha_values_and_indexes(compressed2_wavelet_transform, 1, jump_threshold, alpha_threshold)
 
 # # Plotting the alpha values
 # plt.axvline(x = ((number_pre_jump - compression_threshold) / total_number), color = "r")
@@ -322,7 +319,7 @@ print("")
 # # determine which alpha values are based truley on sizable jumps instead of random
 # # noise fluctuations
 # expanded2_alpha_values =  np.repeat(compressed2_alpha_values, compression_threshold)
-# expanded2_alpha_jump_indexes = Jump_Analysis.compute_alpha_indexes(expanded2_alpha_values, alpha_threshold)
+# expanded2_alpha_jump_indexes = Singularity_Analysis.compute_alpha_indexes(expanded2_alpha_values, alpha_threshold)
 # method2_indexes = np.intersect1d(alpha_jump_indexes, expanded2_alpha_jump_indexes)
 
 # # Attaching the original alpha values to the indexes we care about
@@ -336,7 +333,7 @@ print("")
 # print(method2_indexes_alpha)
 # print("----------")
 # print("Initially flagged singularities", compressed2_jump_indexes)
-# print("Ultimately flagged locations", Jump_Analysis.compute_alpha_indexes(compressed2_alpha_values, alpha_threshold))
+# print("Ultimately flagged locations", Singularity_Analysis.compute_alpha_indexes(compressed2_alpha_values, alpha_threshold))
 # print("Remember, data is compressed by a factor of", compression_threshold)
 # print ("-------------------------------------------------------------")
 # print("")
