@@ -217,6 +217,7 @@ def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_
     print("Run time for setup", (time2 - time1) * 1000, "ms")
     print("Run time for calculating alpha", (time3 - time2) * 1000, "ms")
     print("Run time for calculating indexes", (time4 - time3) * 1000, "ms")
+    print("TOTAL RUN TIME", (time4 - time1) * 1000, "ms")
     print("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)")
     print("")
     return alpha_values, alpha_indexes

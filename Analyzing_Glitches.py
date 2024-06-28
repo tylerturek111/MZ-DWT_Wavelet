@@ -22,7 +22,7 @@ glitch_treshold = 1.0
 compression_threshold = 5
 
 # Parameters for the "bad" glitch data
-number_glitches = 5
+number_glitches = 100
 number_between_glitches = 50
 number_glitch_values = 3
 flat_value = 1.023
@@ -155,12 +155,23 @@ def print_colored(text, color):
 #region Looking for Glitches
 # -------------------------------
 
+# Start time
+glitch_start_time = time.time()
+
+# Using compute_glitch_locations to calculate the location and size of glitches
 glitch_locations, glitch_sizes = Singularity_Analysis.compute_glitch_locations(wavelet_transform, jump_threshold, alpha_threshold, glitch_treshold)
+
+# End time
+glitch_run_time = time.time() - glitch_start_time
+
+# String for run time
+new_method_run_time_string = f"Run time {glitch_run_time * 1000} ms"
 
 print("-------------------------------------------------------------")
 print_colored("Location and Sizes of Suspected Glitches", "magenta")
 for i in range(glitch_locations.shape[0]):
     print("Glitch of size", glitch_sizes[i], "starting at", glitch_locations[i])
+print_colored(new_method_run_time_string, "green")    
 print("-------------------------------------------------------------")
 print("")
 
