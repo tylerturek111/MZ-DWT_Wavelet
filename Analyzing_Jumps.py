@@ -16,17 +16,17 @@ import time
 # -------------------------------
 
 # Parameters for analyzing the jump
-jump_threshold = 0.05
+jump_threshold = 0.50
 alpha_threshold = 0.2
 compression_threshold = 5
 
 # Parameters for the "bad" data
 number_pre_jump = 100
-pre_jump_value = 0.563
+pre_jump_value = 0.500
 number_between_jump = 100
-between_jump_value = 2.583
+between_jump_value = 1.500
 number_post_jump = 100
-post_jump_value = 0.382
+post_jump_value = 0.500
 noise_level = 0.05
 total_number = number_pre_jump + number_between_jump + number_post_jump
 
@@ -40,7 +40,7 @@ number_scales = 3
 # Creating the "bad" data set
 pre_jump = np.full(number_pre_jump, pre_jump_value)
 between_jump = np.full(number_between_jump, between_jump_value)
-post_jump = np.full(number_post_jump, number_post_jump)
+post_jump = np.full(number_post_jump, post_jump_value)
 smooth_original_data_half = np.concatenate((pre_jump, between_jump))
 smooth_original_data = np.concatenate((smooth_original_data_half, post_jump))
 original_data = smooth_original_data + noise_level * np.random.randn(total_number)
@@ -93,28 +93,6 @@ plt.grid(True)
 plt.show()
 
 # -------------------------------
-# To get colored output to highlight important values
-# -------------------------------
-
-def print_colored(text, color):
-    color_codes = {
-        'black': '\033[30m',
-        'red': '\033[31m',
-        'green': '\033[32m',
-        'yellow': '\033[33m',
-        'blue': '\033[34m',
-        'magenta': '\033[35m',
-        'cyan': '\033[36m',
-        'white': '\033[37m',
-        'reset': '\033[0m'
-    }
-    
-    if color in color_codes:
-        print(f"{color_codes[color]}{text}{color_codes['reset']}")
-    else:
-        print(text)
-
-# -------------------------------
 # Looking for jumps based on behavior
 # -------------------------------
 
@@ -132,9 +110,9 @@ jump_method_run_time_string = f"Run time {jump_method_run_time * 1000} ms"
 
 # Printing the results
 print("-------------------------------------------------------------")
-print_colored("Indexes Where Jumps are Suspected based on Behavior", "magenta")
+Singularity_Analysis.print_colored("Indexes Where Jumps are Suspected based on Behavior", "magenta")
 print(jump_indexes)
-print_colored(jump_method_run_time_string, "green")
+Singularity_Analysis.print_colored(jump_method_run_time_string, "green")
 print("-------------------------------------------------------------")
 print("")
 
@@ -166,9 +144,9 @@ plt.show()
 old_method_run_time_string = f"Run time {old_method_run_time * 1000} ms"
 
 print("-------------------------------------------------------------")
-print_colored("Indexes Where Jumps are Suspected based on Old Alpha", "magenta")
+Singularity_Analysis.print_colored("Indexes Where Jumps are Suspected based on Old Alpha", "magenta")
 print(old_alpha_jump_indexes)
-print_colored(old_method_run_time_string, "green")
+Singularity_Analysis.print_colored(old_method_run_time_string, "green")
 print("-------------------------------------------------------------")
 print("")
 
@@ -197,14 +175,11 @@ plt.show()
 new_method_run_time_string = f"Run time {new_method_run_time * 1000} ms"
 
 print("-------------------------------------------------------------")
-print_colored("Indexes Where Jumps are Suspected based on New Alpha", "magenta")
+Singularity_Analysis.print_colored("Indexes Where Jumps are Suspected based on New Alpha", "magenta")
 print(alpha_jump_indexes)
-print_colored(new_method_run_time_string, "green")
+Singularity_Analysis.print_colored(new_method_run_time_string, "green")
 print("-------------------------------------------------------------")
 print("")
-
-for i in range(total_number):
-    print(i, alpha_values[i])
 
 # -------------------------------
 # Comparing old and new alpha values at the points of interest
@@ -231,7 +206,7 @@ combined = np.intersect1d(alpha_jump_indexes, jump_indexes)
 
 print("-------------------------------------------------------------")
 print("Indexes Where Jumps are Suspected based on Beahvior AND Alpha")
-print_colored(combined, "cyan")
+Singularity_Analysis.print_colored(combined, "cyan")
 print("-------------------------------------------------------------")
 print("")
 

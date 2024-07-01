@@ -30,7 +30,7 @@ def compute_jump_locations(transform_array, threshold):
     raw_jump_indexes = np.where(differences > threshold)[0] + 1
     jump_indexes = raw_jump_indexes[::2]
     
-    return jump_indexes
+    return np.array(jump_indexes)
 
 # -------------------------------
 # compute_alpha_values
@@ -88,7 +88,7 @@ def compute_alpha_indexes(alpha_values, threshold):
 # -------------------------------
 
 def efficient_compute_alpha_values(transform_array, cone_slope, singularity_locations):
-    time_1 = time.time()
+    # time_1 = time.time()
     
     # Getting some size data
     length, scales = transform_array.shape
@@ -107,7 +107,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
     o_alpha_values = np.empty(number_singularity + 1)
     alpha_values = np.empty(length)
 
-    time_2 = time.time()
+    # time_2 = time.time()
 
     # Computing the coefficients that we actually care about
     for scale in range(scales):
@@ -130,11 +130,12 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
                 o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
 
         # The last region between the last index and the end
-        interested_o_indexes2 = np.arange(max(singularity_locations[number_singularity - 1] + spread + 1, 0), length, 1)
-        o_values[number_singularity, scale] = np.mean(transform_values[interested_o_indexes2])
+        if number_singularity != 0:
+            interested_o_indexes2 = np.arange(max(singularity_locations[number_singularity - 1] + spread + 1, 0), length, 1)
+            o_values[number_singularity, scale] = np.mean(transform_values[interested_o_indexes2])
             
 
-    time_3 = time.time()
+    # time_3 = time.time()
 
     # Calculating alpha values
     for singularity in range(number_singularity):
@@ -160,22 +161,22 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             alpha_values[singularity_locations[singularity - 1] + 1 : singularity_locations[singularity]] = o_alpha_values[singularity]
     
     # Computing the o alpha values for the last region and assigning them
-    current_o_row = o_values[number_singularity]
-    log_current_o_row = np.log(np.abs(current_o_row))
-    o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
-    o_alpha_values[number_singularity] = o_alpha
-
-    alpha_values[singularity_locations[number_singularity - 1] + 1 : length] = o_alpha_values[number_singularity]
+    if number_singularity != 0:
+        current_o_row = o_values[number_singularity]
+        log_current_o_row = np.log(np.abs(current_o_row))
+        o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
+        o_alpha_values[number_singularity] = o_alpha
+        alpha_values[singularity_locations[number_singularity - 1] + 1 : length] = o_alpha_values[number_singularity]
     
-    time_4 = time.time()
+    # time_4 = time.time()
 
-    print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
-    print("Run times for efficient_compute_alpha_values FROM Jump_Analysis.py")
-    print("Run time for setup", (time_2 - time_1) * 1000, "ms")
-    print("Run time for calculating coefficients", (time_3 - time_2) * 1000, "ms")
-    print("Run time for actually calculating alpha", (time_4 - time_3) * 1000, "ms")
-    print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
-    print("")
+    # print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
+    # print("Run times for efficient_compute_alpha_values FROM Jump_Analysis.py")
+    # print("Run time for setup", (time_2 - time_1) * 1000, "ms")
+    # print("Run time for calculating coefficients", (time_3 - time_2) * 1000, "ms")
+    # print("Run time for actually calculating alpha", (time_4 - time_3) * 1000, "ms")
+    # print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
+    # print("")
 
     return(alpha_values)
 
@@ -198,28 +199,29 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
 # -------------------------------
 
 def packaged_compute_alpha_values_and_indexes(transform_array, cone_slope, jump_threshold, alpha_threshold):
-    time1 = time.time()
+    # time1 = time.time()
 
     singularities = compute_jump_locations(transform_array, jump_threshold)
     
-    time2 = time.time()
+    # time2 = time.time()
 
     alpha_values = efficient_compute_alpha_values(transform_array, cone_slope, singularities)
     
-    time3 = time.time()
+    # time3 = time.time()
 
     alpha_indexes = compute_alpha_indexes(alpha_values, alpha_threshold)
     
-    time4 = time.time()
+    # time4 = time.time()
 
-    print("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)")
-    print("Run times for packaged_compute_alpha_values_and_indexes FROM Jump_Analysis.py")
-    print("Run time for setup", (time2 - time1) * 1000, "ms")
-    print("Run time for calculating alpha", (time3 - time2) * 1000, "ms")
-    print("Run time for calculating indexes", (time4 - time3) * 1000, "ms")
-    print("TOTAL RUN TIME", (time4 - time1) * 1000, "ms")
-    print("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)")
-    print("")
+    # print("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)")
+    # print("Run times for packaged_compute_alpha_values_and_indexes FROM Jump_Analysis.py")
+    # print("Run time for setup", (time2 - time1) * 1000, "ms")
+    # print("Run time for calculating alpha", (time3 - time2) * 1000, "ms")
+    # print("Run time for calculating indexes", (time4 - time3) * 1000, "ms")
+    # print("TOTAL RUN TIME", (time4 - time1) * 1000, "ms")
+    # print("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)")
+    # print("")
+
     return alpha_values, alpha_indexes
 
 # -------------------------------
@@ -277,3 +279,32 @@ def compute_glitch_locations(transform_array, alpha_values, alpha_indexes, glitc
             glitch_sizes = np.append(glitch_sizes, int(glitch_size))
 
     return glitch_locations, glitch_sizes
+
+# -------------------------------
+# print_colored
+# Allows output text to be colored
+# text  : string
+#                    The string to be printed
+# color     : string
+#                    The color of the string
+# returns : string
+#                    The string of text with colors
+# -------------------------------
+
+def print_colored(text, color):
+    color_codes = {
+        'black': '\033[30m',
+        'red': '\033[31m',
+        'green': '\033[32m',
+        'yellow': '\033[33m',
+        'blue': '\033[34m',
+        'magenta': '\033[35m',
+        'cyan': '\033[36m',
+        'white': '\033[37m',
+        'reset': '\033[0m'
+    }
+    
+    if color in color_codes:
+        print(f"{color_codes[color]}{text}{color_codes['reset']}")
+    else:
+        print(text)
