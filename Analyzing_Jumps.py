@@ -21,11 +21,11 @@ alpha_threshold = 0.2
 compression_threshold = 5
 
 # Parameters for the "bad" data
-number_pre_jump = 100
+number_pre_jump = 100000
 pre_jump_value = 0.500
-number_between_jump = 100
+number_between_jump = 100000
 between_jump_value = 1.500
-number_post_jump = 100
+number_post_jump = 100000
 post_jump_value = 0.500
 noise_level = 0.05
 total_number = number_pre_jump + number_between_jump + number_post_jump

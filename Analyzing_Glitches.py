@@ -22,7 +22,7 @@ glitch_treshold = 1.0
 compression_threshold = 5
 
 # Parameters for the "bad" glitch data
-number_glitches = 100
+number_glitches = 5
 number_between_glitches = 50
 number_glitch_values = 3
 flat_value = 1.023

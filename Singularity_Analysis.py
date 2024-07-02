@@ -149,7 +149,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
         current_o_row = o_values[singularity, :]
         log_current_o_row = np.log(np.abs(current_o_row))
         o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
-        o_alpha_values[singularity] = o_alpha\
+        o_alpha_values[singularity] = o_alpha
 
         # Assigning the alpha values to the proper indexes
         # For the c values
