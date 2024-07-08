@@ -1,7 +1,34 @@
 import MZ_Wavelet_Transforms
-import Singularity_Analysis.py
+import Singularity_Analysis
 
 from sotodlib.core import AxisManager
 
+# ()()()()()()()()()()()()()
+# This file processes the raw real data so that it can be utilized
+# ()()()()()()()()()()()()()
 
-raw_data = AxisManager.load("obs_1704900313_lati1_111.h5")
+# -------------------------------
+# get_real_data
+# Generates real data for further analysis
+# length          : integer
+#                   The number of samples to be analyzed
+# Returns         : 1-D Numpy Array of floats
+#                   The modified actual data to look at
+# -------------------------------
+
+def get_real_data(length):
+    # Loading in the raw real data
+    raw_data = AxisManager.load("/mnt/welch/SO/obs_1704900313_lati1_111.h5")
+
+    # Only focusing on the first "length" samples for every detector
+    raw_data.restrict("samps", slice(0, length))
+
+    # Focusing only on detectors that are set up properly
+    raw_data.restrict("dets", raw_data.det_cal.bg > 0)
+
+    # Further processing the data
+    raw_data.preprocess
+    raw_data.preprocess.noise
+    raw_data.preprocess.noise.white_noise
+
+    return raw_data.signal[100]
