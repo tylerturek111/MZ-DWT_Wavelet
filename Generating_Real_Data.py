@@ -10,18 +10,22 @@ from sotodlib.core import AxisManager
 # -------------------------------
 # get_real_data
 # Generates real data for further analysis
+# start_index     : integer
+#                   The point at which jump analysis start
 # length          : integer
 #                   The number of samples to be analyzed
+# detector_number : integer
+#                   The detector number to be analyzed
 # Returns         : 1-D Numpy Array of floats
 #                   The modified actual data to look at
 # -------------------------------
 
-def get_real_data(length):
+def get_real_data(start_index, length, detector_number):
     # Loading in the raw real data
     raw_data = AxisManager.load("/mnt/welch/SO/obs_1704900313_lati1_111.h5")
 
     # Only focusing on the first "length" samples for every detector
-    raw_data.restrict("samps", slice(0, length))
+    raw_data.restrict("samps", slice(start_index, start_index + length))
 
     # Focusing only on detectors that are set up properly
     raw_data.restrict("dets", raw_data.det_cal.bg > 0)
@@ -31,4 +35,4 @@ def get_real_data(length):
     raw_data.preprocess.noise
     raw_data.preprocess.noise.white_noise
 
-    return raw_data.signal[100]
+    return raw_data.signal[detector_number]

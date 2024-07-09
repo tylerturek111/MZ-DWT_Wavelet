@@ -23,18 +23,18 @@ import time
 # -------------------------------
 
 def compute_jump_locations(transform_array, threshold):    
-    # # Compute the absolute differences between consecutive indexes within the first column of the transform array
-    # differences = np.abs(np.diff(transform_array[:, 0]))
+    # Compute the absolute differences between consecutive indexes within the first column of the transform array
+    differences = np.abs(np.diff(transform_array[:, 0]))
 
-    # # Find the indices where the difference exceeds the jump threshold
-    # raw_jump_indexes = np.where(differences > threshold)[0] + 1
-    # jump_indexes = raw_jump_indexes[::2]
+    # Find the indices where the difference exceeds the jump threshold
+    raw_jump_indexes = np.where(differences > threshold)[0] + 1
+    jump_indexes = raw_jump_indexes[::2]
     
-    # return np.array(jump_indexes)
-
-    jump_indexes = np.where(transform_array > threshold)[0]
-
     return np.array(jump_indexes)
+
+    # jump_indexes = np.where(abs(transform_array[:, 0]) > threshold)[0]
+
+    # return np.array(jump_indexes)
 
 # -------------------------------
 # compute_alpha_values
