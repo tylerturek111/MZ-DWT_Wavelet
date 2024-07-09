@@ -32,7 +32,7 @@ def compute_jump_locations(transform_array, threshold):
     
     # return np.array(jump_indexes)
 
-    jump_indexes = np.where(transform_array > jump_threshold)[0]
+    jump_indexes = np.where(transform_array > threshold)[0]
 
     return np.array(jump_indexes)
 
