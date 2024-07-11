@@ -123,21 +123,29 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             interested_c_indexes = np.arange(max(0, singularity_locations[singularity] - spread), min(singularity_locations[singularity] + spread + 1, length), 1)            
             c_values[singularity, scale] = transform_values[interested_c_indexes][np.argmax(np.abs(transform_values[interested_c_indexes]))]
 
-            # Calculating the relevent o coefficients
-            # The case of the first region between 0 and the first index
+            # Computing the proper start and end indexes for the o regions
+            o_start_index = 0
+            o_end_index = 0
             if singularity == 0:
-                interested_o_indexes = np.arange(0, min(singularity_locations[singularity] - spread, length), 1)
-                o_values[0, scale] = np.mean(transform_values[interested_o_indexes])
-            # All other intermediate regions
+                o_start_index = 0
+                o_end_index = min(singularity_locations[singularity] - spread - 1, length)
             else:
-                interested_o_indexes = np.arange(max(singularity_locations[singularity - 1] + spread + 1, 0), min(singularity_locations[singularity] - spread + 1, length), 1)
-                o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
+                o_start_index = max(singularity_locations[singularity - 1] + spread + 1, 0)
+                o_end_index = min(singularity_locations[singularity] - spread - 1, length)
+
+            # Calculating the relevent o coefficients
+            interested_o_indexes = np.arange(o_start_index, o_end_index, 1)
+            o_values[singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes]))
 
         # The last region between the last index and the end
         if number_singularity != 0:
-            interested_o_indexes2 = np.arange(max(singularity_locations[number_singularity - 1] + spread + 1, 0), length, 1)
-            o_values[number_singularity, scale] = np.mean(transform_values[interested_o_indexes2])
-            
+            o_start_index = max(singularity_locations[number_singularity - 1] + spread + 1, 0)
+            o_end_index = length
+            interested_o_indexes2 = np.arange(o_start_index, o_end_index, 1)
+            o_values[number_singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes2]))
+
+    # Getting rid of all instances of 0 within the o_values to account for log(0) errors
+    o_values[o_values == 0] = 0.000000001
 
     # time_3 = time.time()
 
