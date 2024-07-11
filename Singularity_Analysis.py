@@ -136,6 +136,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             # Calculating the relevent o coefficients
             interested_o_indexes = np.arange(o_start_index, o_end_index, 1)
             o_values[singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes]))
+            # o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
 
         # The last region between the last index and the end
         if number_singularity != 0:
@@ -143,6 +144,7 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
             o_end_index = length
             interested_o_indexes2 = np.arange(o_start_index, o_end_index, 1)
             o_values[number_singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes2]))
+            # o_values[number_singularity, scale] = np.mean(transform_values[interested_o_indexes2])
 
     # Getting rid of all instances of 0 within the o_values to account for log(0) errors
     o_values[o_values == 0] = 0.000000001

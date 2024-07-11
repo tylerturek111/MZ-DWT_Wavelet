@@ -20,14 +20,15 @@ import time
 jump_threshold = 0.005
 alpha_threshold = 0.75
 old_alpha_thresold = 0.1
-sqrt_synchronous = 2
-seperation = 25
+sqrt_synchronous = 5
+seperation = 1
 smoothing_index = 100
+window_size = 10
 
 # Paraemeters for the data to look at
 start_index = 0
 total_number = 10000
-detector_number = 300
+detector_number = 0
 
 # Parameters for number of scales for the wavelet transform
 number_scales = 3
@@ -81,7 +82,7 @@ for i in range(sqrt_synchronous):
 
         # Modifying jump threshold based on standard deviation of the wavelet transform
         standard_deviation = np.std(wavelet_transform)
-        jump_threshold = 5 * standard_deviation
+        jump_threshold = 4.5 * standard_deviation
 
         # Plotting the original signal
         axs1[i, j].plot(time_axis, original_data)
@@ -135,17 +136,17 @@ for i in range(sqrt_synchronous):
         alpha_values, alpha_jump_indexes = Singularity_Analysis.packaged_compute_alpha_values_and_indexes(wavelet_transform, 1, jump_threshold, alpha_threshold)
 
         # Plotting the new alpha values
-        axs4[i, j].plot(time_axis, alpha_values, marker = ".")
+        axs4[i, j].plot(time_axis, alpha_values)
         axs4[i, j].set_title(f"Alpha from New Method of Detector {current_detector}", fontsize = 8)
         axs4[i, j].set_xlabel("Time (s)", fontsize = 6)
         axs4[i, j].set_ylabel("Alpha", fontsize = 6)
         axs4[i, j].tick_params(axis = "both", labelsize = 4)
         axs4[i, j].axhline(y = alpha_threshold, color = "r", linestyle = "--")
         axs4[i, j].axhline(y = -1 * alpha_threshold, color = "r", linestyle = "--")
+        axs4[i, j].axhline(y = 0, color = "g")
         axs4[i, j].grid(True)
 
         new_alpha_text = f"Indexes Where Jumps are Suspected based on New Alpha ({alpha_jump_indexes.size} total Jumps): {alpha_jump_indexes}"
-
         Singularity_Analysis.print_colored(new_alpha_text, "yellow")
 
         #
@@ -153,11 +154,37 @@ for i in range(sqrt_synchronous):
         #
         behavior_jumps_indexes = np.array(jump_indexes)
         combined = np.intersect1d(alpha_jump_indexes, jump_indexes)
-        if combined.shape[0] != 0:
-            summary_stats.append([current_detector, combined])
 
         combined_text = f"Indexes Where Jumps are Suspected based on Beahvior AND Alpha ({combined.size} total Jumps): {combined}"
         Singularity_Analysis.print_colored(combined_text, "cyan")
+
+
+        #
+        # Saving the possible jumps all together and generating plots of their locations
+        # 
+        if combined.shape[0] != 0:
+            summary_stats.append([current_detector, combined])
+            for j in range(combined.size):
+                # Start and end of the graph
+                graph_start_value = max(0, combined[j] - window_size)
+                graph_end_value = min(combined[j] + window_size, start_index + total_number)
+
+                # Setting up the x-axis
+                time_axis3 = np.linspace(graph_start_value, graph_end_value, graph_end_value - graph_start_value, endpoint=False)
+                
+                # Actually creating the plots
+                fig5, ax5 = plt.subplots(figsize=(10, 10))
+
+                ax5.plot(time_axis3, original_data[graph_start_value : graph_end_value])
+                ax5.set_title(f"Detector {current_detector} Around Point {combined[j]}")
+                ax5.set_xlabel("Time (s)")
+                ax5.set_ylabel("Amplitude")
+                ax5.axvline(x = combined[j], color = "r", linestyle = "--")
+                ax5.axvline(x = combined[j] + 1, color = "r", linestyle = "--")
+
+                # Saving the plot
+                figure_name = f"{current_detector}_{combined[j]}"
+                fig5.savefig(figure_name)
 
         # Ending the printing output for each detector
         print("-------------------------------------------------------------")
