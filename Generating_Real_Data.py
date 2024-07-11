@@ -15,7 +15,7 @@ from sotodlib.core import AxisManager
 global_raw_data = AxisManager.load("/mnt/welch/SO/obs_1704900313_lati1_111.h5")
 
 # Focusing only on detectors that are set up properly
-global_raw_data.restrict("dets", global_raw_data.det_cal.bg > 0)
+global_raw_data.restrict("dets", global_raw_data.det_cal.bg >= 0)
 
 # -------------------------------
 # get_real_data
