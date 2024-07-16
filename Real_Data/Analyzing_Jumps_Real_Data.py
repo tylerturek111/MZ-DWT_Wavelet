@@ -1,12 +1,20 @@
-import MZ_Wavelet_Transforms
-import Singularity_Analysis
 import Generating_Real_Data
 
-import pywt
+import sys
+import os
+
+current_dir = os.path.dirname(__file__)
+folder1_path = os.path.abspath(os.path.join(current_dir, '..', 'Wavelet_Code'))
+sys.path.insert(0, folder1_path)
+
+import MZ_Wavelet_Transforms
+import Singularity_Analysis
+
+sys.path.pop(0)
+
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-import os
 
 # ()()()()()()()()()()()()()
 # This file utilizes the functions in Singularity_Analysis to look at "jumps" with real data
@@ -17,17 +25,17 @@ import os
 # -------------------------------
 
 # Parameters for analyzing the jump
-sd_ratio = 5
+flag_noise_ratio = 40
 alpha_threshold = 0.75
 
 # Parameters for the detectors to look at
 detector_number = 0
 seperation = 1
-sqrt_synchronous = 2
+sqrt_synchronous = 10
 
 # Paraemeters for the time data to look at
 start_index = 0
-total_number = 10000
+total_number = 100000
 
 # Parameters for number of scales for the wavelet transform
 number_scales = 3
@@ -38,7 +46,7 @@ smoothing_index = 100
 window_size = 100
 
 # -------------------------------
-# Setting up stoff
+# Setting up stuff
 # -------------------------------
 
 # Setting up the graphs
@@ -48,17 +56,24 @@ fig3, axs3 = plt.subplots(sqrt_synchronous, sqrt_synchronous, figsize=(15, 15))
 fig4, axs4 = plt.subplots(sqrt_synchronous, sqrt_synchronous, figsize=(15, 15))
 
 # Setting up the time axis
-time_axis = np.linspace(0, 10000, total_number, endpoint=False)
-time_axis2 = np.linspace(0, 10000, total_number - smoothing_index + 1, endpoint=False)
+time_axis = np.linspace(0, total_number, total_number, endpoint=False)
+time_axis2 = np.linspace(0, total_number, total_number - smoothing_index + 1, endpoint=False)
 summary_stats = []
 
 # Setting up the path to store the figures
-folder = "../Jump_Plots"
-if not os.path.exists(folder):
-    os.makedirs(folder)
-folder2 = "../Summary_Plots"
-if not os.path.exists(folder2):
-    os.makedirs(folder2)
+SO_location = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
+
+# Setting up where to store jump plots
+jump_plots = 'Jump_Plots'
+jump_plots_path = os.path.join(SO_location, jump_plots)
+if not os.path.exists(jump_plots_path):
+    os.makedirs(jump_plots_path)
+
+# Setting up where to store summary plots
+summary_plots = 'Summary_Plots'
+summary_plots_path = os.path.join(SO_location, summary_plots)
+if not os.path.exists(summary_plots_path):
+    os.makedirs(summary_plots_path)
 
 # -------------------------------
 # Looking at multiple detectprs at once
@@ -77,42 +92,40 @@ for i in range(sqrt_synchronous):
         # Getting the real data
         original_data, noise_level = Generating_Real_Data.get_real_data(start_index, total_number, current_detector)
 
-        print(f"Noise Level for {i}, {j}: {noise_level}")
+        # print(f"Noise Level for {i}, {j}: {noise_level}")
+        # # Getting the power of noise and SNR for the signal itself
+        # smooth_data = np.convolve(original_data, np.ones(smoothing_index)/smoothing_index, mode='valid')
+        # deviation_data = original_data[0 : total_number - smoothing_index + 1] - smooth_data
+        # noise_power = np.mean(deviation_data**2)
+        # signal_power = np.mean(original_data**2)
+        # signal_noise_ratio = signal_power / noise_power
+        # signal_noise_ratio_plus = 10 * math.log(signal_power / noise_power)
 
-        # Getting the power of noise and SNR for the signal itself
-        smooth_data = np.convolve(original_data, np.ones(smoothing_index)/smoothing_index, mode='valid')
-        deviation_data = original_data[0 : total_number - smoothing_index + 1] - smooth_data
-        noise_power = np.mean(deviation_data**2)
-        signal_power = np.mean(original_data**2)
-        signal_noise_ratio = signal_power / noise_power
-        signal_noise_ratio_plus = 10 * math.log(signal_power / noise_power)
-
-        print(f"Signal Power {signal_power}")
-        print(f"Noise Power {noise_power}")
+        # print(f"Signal Power {signal_power}")
+        # print(f"Noise Power {noise_power}")
 
         # Running the wavelet transform
         wavelet_transform, time_series = MZ_Wavelet_Transforms.forward_wavelet_transform(number_scales, original_data)
         processed_data = MZ_Wavelet_Transforms.inverse_wavelet_transform(wavelet_transform, time_series)
         
-        # Getting the power of noise and SNR for the wavelet transform 
-        first_wavelet_transform = wavelet_transform[:, 0]
-        smooth_wavelet = np.convolve(first_wavelet_transform, np.ones(smoothing_index)/smoothing_index, mode='valid')
-        deviation_wavelet = first_wavelet_transform[0 : total_number - smoothing_index + 1] - smooth_wavelet
-        noise_power_wavelet = np.mean(deviation_wavelet**2)
-        signal_power_wavelet = np.mean(first_wavelet_transform**2)
-        signal_noise_ratio_wavelet = signal_power_wavelet / noise_power_wavelet
+        # # Getting the power of noise and SNR for the wavelet transform 
+        # first_wavelet_transform = wavelet_transform[:, 0]
+        # smooth_wavelet = np.convolve(first_wavelet_transform, np.ones(smoothing_index)/smoothing_index, mode='valid')
+        # deviation_wavelet = first_wavelet_transform[0 : total_number - smoothing_index + 1] - smooth_wavelet
+        # noise_power_wavelet = np.mean(deviation_wavelet**2)
+        # signal_power_wavelet = np.mean(first_wavelet_transform**2)
+        # signal_noise_ratio_wavelet = signal_power_wavelet / noise_power_wavelet
 
-        # Modifying jump threshold based on standard deviation of the wavelet transform
-        standard_deviation = np.std(wavelet_transform)
-        jump_threshold = sd_ratio * standard_deviation
+        # # Modifying jump threshold based on standard deviation of the wavelet transform
+        # standard_deviation = np.std(wavelet_transform)
+        # standard_deviation2 = np.std(original_data)
+        jump_threshold = flag_noise_ratio * noise_level
 
-        print(f"Standard Deviation for {i}, {j}: {standard_deviation}")
-
-        print(f"Ratio for {i}, {j}: {standard_deviation / noise_level}")
-
-        print(f"SNR {signal_noise_ratio}")
-        
-        print(f"SNR Plus {signal_noise_ratio_plus}")
+        # print(f"Standard Deviation for {i}, {j}: {standard_deviation}")
+        # print(f"Standard Deviation 2 for {i}, {j}: {standard_deviation2}")
+        # print(f"Ratio for {i}, {j}: {standard_deviation / noise_level}")
+        # print(f"SNR {signal_noise_ratio}")
+        # print(f"SNR Plus {signal_noise_ratio_plus}")
 
         # Plotting the original signal
         axs1[i, j].plot(time_axis, original_data)
@@ -188,6 +201,10 @@ for i in range(sqrt_synchronous):
         combined_text = f"Indexes Where Jumps are Suspected based on Beahvior AND Alpha ({combined.size} total Jumps): {combined}"
         Singularity_Analysis.print_colored(combined_text, "cyan")
 
+        # Adding the location of humps to signal graph
+        for k in range(combined.size):
+            axs1[i, j].axvline(x = combined[k], color = "r", linestyle = "--")
+
         #
         # Saving the possible jumps all together and generating plots of their locations
         # 
@@ -213,7 +230,7 @@ for i in range(sqrt_synchronous):
 
                 # Saving the plot
                 file_name = f"{current_detector}_{combined[j]}"
-                path = os.path.join(folder, file_name)
+                path = os.path.join(jump_plots_path, file_name)
                 fig5.savefig(path)
 
         # Ending the printing output for each detector
@@ -230,10 +247,10 @@ for i in range(summary_stats.shape[0]):
 Singularity_Analysis.print_colored("(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(-)(", "red")
 
 # Saving the summary plots
-path1 = os.path.join(folder2, "Signals")
-path2 = os.path.join(folder2, "Transforms")
-path3 = os.path.join(folder2, "Old_Alpha")
-path4 = os.path.join(folder2, "New_Alpha")
+path1 = os.path.join(summary_plots_path, "Signals")
+path2 = os.path.join(summary_plots_path, "Transforms")
+path3 = os.path.join(summary_plots_path, "Old_Alpha")
+path4 = os.path.join(summary_plots_path, "New_Alpha")
 fig1.savefig(path1)
 fig2.savefig(path2)
 fig3.savefig(path3)

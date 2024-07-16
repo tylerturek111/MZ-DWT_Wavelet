@@ -1,5 +1,14 @@
+import sys
+import os
+
+current_dir = os.path.dirname(__file__)
+folder1_path = os.path.abspath(os.path.join(current_dir, '..', 'Wavelet_Code'))
+sys.path.insert(0, folder1_path)
+
 import MZ_Wavelet_Transforms
 import Singularity_Analysis
+
+sys.path.pop(0)
 
 from sotodlib.core import AxisManager
 
