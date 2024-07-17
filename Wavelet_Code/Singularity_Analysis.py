@@ -265,6 +265,8 @@ def alpha_and_behavior_jumps(transform_array, jump_threshold, alpha_threshold):
     # Finding the location of jumps based on both behavior and alpha
     jump_locations = np.intersect1d(behavior_jumps, alpha_jumps)
 
+    print(jump_threshold, alpha_threshold, jump_locations)
+
     return jump_locations, alpha_values
 
 # -------------------------------

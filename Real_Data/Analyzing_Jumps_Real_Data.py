@@ -25,13 +25,13 @@ import math
 # -------------------------------
 
 # Parameters for analyzing the jump
-flag_noise_ratio = 40
-alpha_threshold = 0.75
+flag_noise_ratio = 45
+alpha_threshold = 0.20
 
 # Parameters for the detectors to look at
 detector_number = 0
 seperation = 1
-sqrt_synchronous = 10
+sqrt_synchronous = 2
 
 # Paraemeters for the time data to look at
 start_index = 0
@@ -232,6 +232,8 @@ for i in range(sqrt_synchronous):
                 file_name = f"{current_detector}_{combined[j]}"
                 path = os.path.join(jump_plots_path, file_name)
                 fig5.savefig(path)
+        
+        plt.close()
 
         # Ending the printing output for each detector
         print("-------------------------------------------------------------")
@@ -255,3 +257,5 @@ fig1.savefig(path1)
 fig2.savefig(path2)
 fig3.savefig(path3)
 fig4.savefig(path4)
+
+plt.close('all')
