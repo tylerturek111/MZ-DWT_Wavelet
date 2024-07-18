@@ -26,24 +26,23 @@ import math
 # -------------------------------
 
 # Parameters for analyzing the flag noise ratio (jump threshold equivalent)
-flag_noise_ratio_start = 40
-flag_noise_ratio_end = 50
-flag_noise_number = 10
+flag_noise_ratio_start = 4
+flag_noise_ratio_end = 5
+flag_noise_ratio_step = 0.1
 
 # Parameters for analyzing the alpha thresholds
 alpha_threshold_start = 0
 alpha_threshold_end = 1.00
-alpha_threshold_number = 10
+alpha_threshold_step = 0.1
 
 # Parameters for the jump size
-jump_size_start = .07
-jump_size_end = 1
-jump_size_count = 1
+jump_noise_ratio_start = 10
+jump_noise_ratio_end = 10
+jump_noise_ratio_step = 1
 jump_location = 50000
 
 # Parameters for the detectors to look at and the data points
-# detector_number = 0
-detector_list = np.array([0, 1, 2])
+detector_list = np.array([0, 1, 3, 6, 8, 9, 11, 14, 18, 21, 23])
 start_index = 0
 total_number = 100000
 
@@ -55,6 +54,7 @@ old_alpha_thresold = 0.1
 smoothing_index = 100
 window_size = 100
 number_trials = 1
+sqrt_band = 10
 
 # -------------------------------
 # create_jump_data
@@ -65,8 +65,8 @@ number_trials = 1
 #                    The start index of the data
 # length           : integer
 #                    The length of data to look at
-# jump_size        : integer
-#                    The size of the jump
+# jump_noise_ratio : integer
+#                    Ratio between jump and noise
 # jump_location    : integer
 #                    The location of the jump
 # R, r, r          : 1-D Numpy Array of floats
@@ -77,16 +77,13 @@ number_trials = 1
 #                    The noise level
 # -------------------------------
 
-def create_jump_data(detector, start, length, jump_size, jump_location):
+def create_jump_data(detector, start, length, jump_noise_ratio, jump_location):
     # Getting the real data
     raw_data, noise_level = Generating_Real_Data.get_real_data(start, length, detector)
 
-    print("Noise", noise_level)
-
     # Adding in the jump
     added_jump = np.zeros(length, dtype=float)
-    added_jump[jump_location:] = jump_size
-    print(added_jump)
+    added_jump[jump_location:] = jump_noise_ratio * sqrt_band * noise_level
     original_data = raw_data + added_jump
 
     # Running the wavelet transform
@@ -99,8 +96,6 @@ def create_jump_data(detector, start, length, jump_size, jump_location):
 # -------------------------------
 # run_test
 # Runs jump analysis for one specific criteria
-# number_trials     : integer
-#                     The number of trials to run
 # jump              : integer
 #                     Jump threshold to be tested
 # alpha             : integer
@@ -110,141 +105,131 @@ def create_jump_data(detector, start, length, jump_size, jump_location):
 # jump_location     : integer
 #                     The location of the jump
 # RETURNS, returns  : integer
-#                     False positive ratio
+#                     1 if false positive occured, 0 otherwise
 # returns, RETURNS  : integer
-#                     False negative ratio
+#                     1 if false negative occured, 0 otherwise
 # -------------------------------
 
-def run_test(number_trials, jump, alpha, transform, jump_location):
+def run_test(jump, alpha, transform, jump_location):
     # Flags other jumps
     false_positive_count = 0.0
     # Doesn't flag the jump
     false_negative_count = 0.0
 
-    # Iterating multiple times
-    for i in range(number_trials):
-        # Computing jump locations with the developed methods
-        jump_locations, temp = Singularity_Analysis.alpha_and_behavior_jumps(transform, jump, alpha)
+    # Computing jump locations with the developed methods
+    jump_locations, temp = Singularity_Analysis.alpha_and_behavior_jumps(transform, jump, alpha)
+    print(jump, alpha, jump_locations)
+    # Computing the number of false positives and false negatives
+    if jump_location in jump_locations:
+        if jump_locations.size != 1:
+            false_positive_count = 1
+    else:
+        false_negative_count = 1
+        if jump_locations.size != 0:
+            false_positive_count = 1
 
-        print("ALPHAS")
-        print(temp[49998])
-        print(temp[49999])
-        print()
-        # Computing the number of false positives and false negatives
-        if jump_location in jump_locations:
-            if jump_locations.size != 1:
-                false_positive_count = false_positive_count + 1
-        else:
-            false_negative_count = false_negative_count + 1
-            if jump_locations.size != 0:
-                false_positive_count = false_positive_count + 1
-
-    print("Jump:", jump, " Alpha:", alpha, "FP and FR", false_positive_count / number_trials, false_negative_count / number_trials, jump_locations.size)
     # Returning the results
-    return float(false_positive_count / number_trials), float(false_negative_count / number_trials)
+    return false_positive_count, false_negative_count
 
 # -------------------------------
 # determine_accuracy
 # Runs jump analysis with varrying parameters and generate heat maps to determine accuracy
-# number_trials     : integer
-#                     The number of trials to run
-# ratio_start       : integer
-#                     Start of flag noise ratio
-# ratio_end         : integer
-#                     End of flag noise ratio
-# ratio_count       : integer
-#                     Number of flag noise ratios to be tested
-# alpha_start       : integer
-#                     Start of alpha threshold
-# alpha_end         : integer
-#                     End of alpha threshold
-# alpha_count       : integer
-#                     Number of alpha thresholds to be tested
-# data              : array
-#                     The transform array
+# ratios            : array
+#                     The flag noise ratio to be tested
+# alphas            : array
+#                     The alpha values to be tested
 # jump_location     : integer
 #                     The location of the jump
-# noise_level       : integer
-#                     The noise level
-# jump_size         : integer
-#                     The size of the jump
-# detector          : integer
-#                     The detector to look at
+# jump_noise_ratio  : integer
+#                     Ratio between jump and noise
+# detector          : array
+#                     The array of detectors to look at
 # RETURNS           : integer
 #                     Means nothing
 # -------------------------------
 
-def determine_accuracy(number_trials, ratio_start, ratio_end, ratio_count, 
-    alpha_start, alpha_end, alpha_count, transform, jump_location, noise_level, jump_size, detector):
+def determine_accuracy(ratios, alphas, jump_location, jump_noise_ratio, detectors):
     # Saving false positive (falsely flags other points) and false negatives (doesn't flag the jump)
-    false_positives = np.empty((ratio_count, alpha_count))
-    false_negatives = np.empty((ratio_count, alpha_count))
+    false_positives = np.empty((ratios.size, alphas.size))
+    false_negatives = np.empty((ratios.size, alphas.size))
 
-    ratio_values = np.arange(ratio_start, ratio_end, (ratio_end - ratio_start) / ratio_count)
-    alpha_values = np.arange(alpha_start, alpha_end, (alpha_end - alpha_start) / alpha_count)
-    # Running this for the different sets of ratio's and alphas
-    for ratio in range(ratio_count):
-        for alpha in range(alpha_count):
-            false_positives[ratio, alpha], false_negatives[ratio, alpha] = run_test(number_trials, ratio_values[ratio] * noise_level, alpha_values[alpha], transform, jump_location)
+    for detector in range(detectors.size):
+        # Creating the data
+        data, transform, noise = create_jump_data(detectors[detector], start_index, total_number, jump_noise_ratio, jump_location + 1)
 
-    print(false_positives)
-    
-    print(false_negatives)
+        # Creating a plot of the data
+        plt.plot(time_axis, data)
+        plt.axvline(x = jump_location - 1, color = "r", linestyle = "--")
+        file_name = f"Signal_{detector}.png"
+        path = os.path.join(heat_maps_path, file_name)
+        plt.savefig(path)
+        plt.close()
+
+        # Running this for the different sets of ratio's and alphas for each detector
+        for ratio in range(ratios.size):
+            for alpha in range(alphas.size):
+                false_positive, false_negative = run_test(ratios[ratio] * sqrt_band * noise, alphas[alpha], transform, jump_location)
+                false_positives[ratio, alpha] = false_positives[ratio, alpha] + false_positive 
+                false_negatives[ratio, alpha] = false_negatives[ratio, alpha] + false_negative
+
+    # Getting the counts to become ratios
+    false_positives = false_positives / detectors.size
+    false_negatives = false_negatives / detectors.size
+
     # Plotting the results
     fig, axs = plt.subplots(1, 2, figsize=(10, 10))
-
-    # Plot of false positive ratio
-    colors1 = [(0, 1, 0), (1, 0, 0)] 
-    cmap_name1 = 'green_red'
-    custom_cmap1 = mcolors.LinearSegmentedColormap.from_list(cmap_name1, colors1, N = 256)
-    im1 = axs[0].imshow(false_positives, cmap = custom_cmap1, interpolation = 'nearest', vmax = 0.99)
-    title_text1 = f"False Positive rate with Jump of Size {jump_size} \n (Green (red) for doesn't (does) flag other jumps)"
-    axs[0].set_title(title_text1, fontsize = 10)
-    axs[0].set_xlabel('Alpha Threshold', fontsize = 8)
-    axs[0].set_ylabel('Noise to Jump Threshold Ratio', fontsize = 8)
-    fig.colorbar(im1, ax = axs[0], shrink = 0.2, pad = 0.05)
-    axs[0].invert_yaxis()
-    xticks = np.linspace(alpha_start, alpha_end, 11)
-    xtick_labels = [f'{tick:.2f}' for tick in xticks]
-    axs[0].set_xticks(np.linspace(0, alpha_count - 1, 11))
-    axs[0].set_xticklabels(xtick_labels, fontsize = 6)
-    yticks = np.linspace(ratio_start, ratio_end, 11)
-    ytick_labels = [f'{tick:.2f}' for tick in yticks]
-    axs[0].set_yticks(np.linspace(0, ratio_count - 1, 11))
-    axs[0].set_yticklabels(ytick_labels, fontsize = 6)
-    # for i in range(false_positives.shape[0]):
-    #     for j in range(false_positives.shape[1]):
-    #         text = axs[0].text(j, i, f'{false_positives[i, j]:.2f}', ha='center', va='center', color='black', fontsize=4)
-
 
     # Plots of false negative ratios
     colors2 = [(0, 1, 0), (1, 0, 0)] 
     cmap_name2 = 'green_red'
     custom_cmap2 = mcolors.LinearSegmentedColormap.from_list(cmap_name2, colors2, N = 256)
-    im2 = axs[1].imshow(false_negatives, cmap = custom_cmap2, interpolation = 'nearest', vmin = 0.01)
-    title_text2 = f"False Negative (doesn't flag the jump) rate with Jump of Size {jump_size} \n (Green (red) for does (doesn't) flag the artificial jump)"
-    axs[1].set_title(title_text2, fontsize = 10)
+    im2 = axs[0].imshow(false_negatives, cmap = custom_cmap2, interpolation = 'nearest', vmin = 0.01)
+    title_text2 = f"False Negative Rate with Jump/Noise ratio of {jump_noise_ratio} \n (Green (red) for does (doesn't) flag the artificial jump)"
+    axs[0].set_title(title_text2, fontsize = 10)
+    axs[0].set_xlabel('Alpha Threshold', fontsize = 8)
+    axs[0].set_ylabel('Noise to Jump Threshold Ratio', fontsize = 8)
+    fig.colorbar(im2, ax = axs[0], shrink = 0.2, pad = 0.05)
+    axs[0].invert_yaxis()
+    xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
+    xtick_labels = [f'{tick:.2f}' for tick in xticks]
+    axs[0].set_xticks(np.linspace(0, alphas.size - 1, 11))
+    axs[0].set_xticklabels(xtick_labels, fontsize = 6)
+    yticks = np.linspace(ratios[0], ratios[ratios.size - 1], 11)
+    ytick_labels = [f'{tick:.2f}' for tick in yticks]
+    axs[0].set_yticks(np.linspace(0, ratios.size - 1, 11))
+    axs[0].set_yticklabels(ytick_labels, fontsize = 6)
+    for i in range(false_positives.shape[0]):
+        for j in range(false_positives.shape[0]):
+            text = axs[0].text(j, i, f'{false_negatives[i, j]:.2f}', ha='center', va='center', color='black', fontsize=4)
+
+    # Plot of false positive ratio
+    colors1 = [(0, 1, 0), (1, 0, 0)] 
+    cmap_name1 = 'green_red'
+    custom_cmap1 = mcolors.LinearSegmentedColormap.from_list(cmap_name1, colors1, N = 256)
+    im1 = axs[1].imshow(false_positives, cmap = custom_cmap1, interpolation = 'nearest', vmax = 0.99)
+    title_text1 = f"False Positive Rate with Jump/Noise Ratio of {jump_noise_ratio} \n (Green (red) for doesn't (does) flag other jumps)"
+    axs[1].set_title(title_text1, fontsize = 10)
     axs[1].set_xlabel('Alpha Threshold', fontsize = 8)
     axs[1].set_ylabel('Noise to Jump Threshold Ratio', fontsize = 8)
-    fig.colorbar(im2, ax = axs[1], shrink = 0.2, pad = 0.05)
+    fig.colorbar(im1, ax = axs[1], shrink = 0.2, pad = 0.05)
     axs[1].invert_yaxis()
-    xticks = np.linspace(alpha_start, alpha_end, 11)
+    xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
     xtick_labels = [f'{tick:.2f}' for tick in xticks]
-    axs[1].set_xticks(np.linspace(0, alpha_count - 1, 11))
+    axs[1].set_xticks(np.linspace(0, alphas.size - 1, 11))
     axs[1].set_xticklabels(xtick_labels, fontsize = 6)
-    yticks = np.linspace(ratio_start, ratio_end, 11)
+    yticks = np.linspace(ratios[0], ratios[ratios.size - 1], 11)
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
-    axs[1].set_yticks(np.linspace(0, ratio_count - 1, 11))
+    axs[1].set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs[1].set_yticklabels(ytick_labels, fontsize = 6)
-    # for i in range(false_positives.shape[0]):
-    #     for j in range(false_positives.shape[1]):
-    #         text = axs[1].text(j, i, f'{false_negatives[i, j]:.2f}', ha='center', va='center', color='black', fontsize=4)
+    for i in range(false_positives.shape[1]):
+        for j in range(false_positives.shape[1]):
+            text = axs[1].text(j, i, f'{false_positives[i, j]:.2f}', ha='center', va='center', color='black', fontsize=4)
 
     # Saving the plots
     plt.tight_layout()
 
     # Saving the plot
-    file_name = f"Heat_Map_{detector}_{jump_size}.png"
+    file_name = f"Heat_Map_{jump_noise_ratio}.png"
     path = os.path.join(heat_maps_path, file_name)
     fig.savefig(path)
 
@@ -265,23 +250,14 @@ if not os.path.exists(heat_maps_path):
         
 time_axis = np.linspace(0, total_number, total_number, endpoint=False)
 
+# Setting up the parameters that can be changed
+ratios = np.arange(flag_noise_ratio_start, flag_noise_ratio_end + flag_noise_ratio_step, flag_noise_ratio_step)
+alphas = np.arange(alpha_threshold_start, alpha_threshold_end + alpha_threshold_step, alpha_threshold_step)
+added_jump = np.arange(jump_noise_ratio_start, jump_noise_ratio_end + jump_noise_ratio_step, jump_noise_ratio_step)
+
 # Actually running the code
-for detector in detector_list:
-    for jump_size in np.arange(jump_size_start, jump_size_end, (jump_size_end - jump_size_start) / jump_size_count):
-        # Creating the data
-        data, transform, noise = create_jump_data(detector, start_index, total_number, jump_size, jump_location)
-
-        # Creating a plot of the data
-        plt.plot(time_axis, data)
-        plt.axvline(x = jump_location - 1, color = "r", linestyle = "--")
-        file_name = f"Signal_{detector}.png"
-        path = os.path.join(heat_maps_path, file_name)
-        plt.savefig(path)
-
-        plt.close()
-
+for jump_noise_ratio in added_jump:
         # Running the simulations
-        _ = determine_accuracy(number_trials, flag_noise_ratio_start, flag_noise_ratio_end, flag_noise_number, 
-            alpha_threshold_start, alpha_threshold_end, alpha_threshold_number, transform, jump_location - 1, noise, jump_size, detector)
+        _ = determine_accuracy(ratios, alphas, jump_location - 1, jump_noise_ratio, detector_list)
 
 plt.close('all')

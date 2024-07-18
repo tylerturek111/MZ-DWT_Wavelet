@@ -25,13 +25,13 @@ import math
 # -------------------------------
 
 # Parameters for analyzing the jump
-flag_noise_ratio = 45
-alpha_threshold = 0.20
+flag_noise_ratio = 50
+alpha_threshold = 0.75
 
 # Parameters for the detectors to look at
 detector_number = 0
 seperation = 1
-sqrt_synchronous = 2
+sqrt_synchronous = 5
 
 # Paraemeters for the time data to look at
 start_index = 0
@@ -92,40 +92,40 @@ for i in range(sqrt_synchronous):
         # Getting the real data
         original_data, noise_level = Generating_Real_Data.get_real_data(start_index, total_number, current_detector)
 
-        # print(f"Noise Level for {i}, {j}: {noise_level}")
-        # # Getting the power of noise and SNR for the signal itself
-        # smooth_data = np.convolve(original_data, np.ones(smoothing_index)/smoothing_index, mode='valid')
-        # deviation_data = original_data[0 : total_number - smoothing_index + 1] - smooth_data
-        # noise_power = np.mean(deviation_data**2)
-        # signal_power = np.mean(original_data**2)
-        # signal_noise_ratio = signal_power / noise_power
-        # signal_noise_ratio_plus = 10 * math.log(signal_power / noise_power)
+        print(f"Noise Level for {i}, {j}: {noise_level}")
+        # Getting the power of noise and SNR for the signal itself
+        smooth_data = np.convolve(original_data, np.ones(smoothing_index)/smoothing_index, mode='valid')
+        deviation_data = original_data[0 : total_number - smoothing_index + 1] - smooth_data
+        noise_power = np.mean(deviation_data**2)
+        signal_power = np.mean(original_data**2)
+        signal_noise_ratio = signal_power / noise_power
+        signal_noise_ratio_plus = 10 * math.log(signal_power / noise_power)
 
-        # print(f"Signal Power {signal_power}")
-        # print(f"Noise Power {noise_power}")
+        print(f"Signal Power {signal_power}")
+        print(f"Noise Power {noise_power}")
 
         # Running the wavelet transform
         wavelet_transform, time_series = MZ_Wavelet_Transforms.forward_wavelet_transform(number_scales, original_data)
         processed_data = MZ_Wavelet_Transforms.inverse_wavelet_transform(wavelet_transform, time_series)
         
-        # # Getting the power of noise and SNR for the wavelet transform 
-        # first_wavelet_transform = wavelet_transform[:, 0]
-        # smooth_wavelet = np.convolve(first_wavelet_transform, np.ones(smoothing_index)/smoothing_index, mode='valid')
-        # deviation_wavelet = first_wavelet_transform[0 : total_number - smoothing_index + 1] - smooth_wavelet
-        # noise_power_wavelet = np.mean(deviation_wavelet**2)
-        # signal_power_wavelet = np.mean(first_wavelet_transform**2)
-        # signal_noise_ratio_wavelet = signal_power_wavelet / noise_power_wavelet
+        # Getting the power of noise and SNR for the wavelet transform 
+        first_wavelet_transform = wavelet_transform[:, 0]
+        smooth_wavelet = np.convolve(first_wavelet_transform, np.ones(smoothing_index)/smoothing_index, mode='valid')
+        deviation_wavelet = first_wavelet_transform[0 : total_number - smoothing_index + 1] - smooth_wavelet
+        noise_power_wavelet = np.mean(deviation_wavelet**2)
+        signal_power_wavelet = np.mean(first_wavelet_transform**2)
+        signal_noise_ratio_wavelet = signal_power_wavelet / noise_power_wavelet
 
-        # # Modifying jump threshold based on standard deviation of the wavelet transform
-        # standard_deviation = np.std(wavelet_transform)
-        # standard_deviation2 = np.std(original_data)
+        # Modifying jump threshold based on standard deviation of the wavelet transform
+        standard_deviation = np.std(wavelet_transform)
+        standard_deviation2 = np.std(original_data)
         jump_threshold = flag_noise_ratio * noise_level
 
-        # print(f"Standard Deviation for {i}, {j}: {standard_deviation}")
-        # print(f"Standard Deviation 2 for {i}, {j}: {standard_deviation2}")
-        # print(f"Ratio for {i}, {j}: {standard_deviation / noise_level}")
-        # print(f"SNR {signal_noise_ratio}")
-        # print(f"SNR Plus {signal_noise_ratio_plus}")
+        print(f"Standard Deviation for {i}, {j}: {standard_deviation}")
+        print(f"Standard Deviation 2 for {i}, {j}: {standard_deviation2}")
+        print(f"Ratio for {i}, {j}: {standard_deviation / noise_level}")
+        print(f"SNR {signal_noise_ratio}")
+        print(f"SNR Plus {signal_noise_ratio_plus}")
 
         # Plotting the original signal
         axs1[i, j].plot(time_axis, original_data)
