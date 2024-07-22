@@ -31,7 +31,7 @@ alpha_threshold = 0.75
 # Parameters for the detectors to look at
 detector_number = 0
 seperation = 1
-sqrt_synchronous = 5
+sqrt_synchronous = 4
 
 # Paraemeters for the time data to look at
 start_index = 0

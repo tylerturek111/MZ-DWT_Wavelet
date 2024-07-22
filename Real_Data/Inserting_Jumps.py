@@ -42,7 +42,10 @@ jump_noise_ratio_step = 1
 jump_location = 50000
 
 # Parameters for the detectors to look at and the data points
-detector_list = np.array([0, 1, 3, 6, 8, 9, 11, 14, 18, 21, 23])
+detector_start = 0
+detector_end = 1000
+
+# Parameters for the data points to look at
 start_index = 0
 total_number = 100000
 
@@ -55,6 +58,52 @@ smoothing_index = 100
 window_size = 100
 number_trials = 1
 sqrt_band = 10
+
+# -------------------------------
+# generate_detectors
+# Gets a list of detectors that are suspected to not have jumps in them
+# detector_start           : integer
+#                     The detector to start at
+# detector_end            : integer
+#                     The detector to end at
+# signal_start            : integer
+#                     The place to start signal
+# signal_length            : integer
+#                     The length of signal to look at
+# ratio     : integer
+#                     The jump threshold - noise ratio
+# alpha  : integer
+#                     The alpha threshold
+# RETURNS           : integer
+#                     Array of the detectors that do not appear to have a jump
+# -------------------------------
+
+def generate_detectors(detector_start, detector_end, signal_start, signal_length, ratio, alpha):
+    # Where the valid detectors will be stored
+    detectors = np.empty(0, dtype = int)
+
+    # Iterating through for each possible detector
+    for detector in range(detector_start, detector_end):
+        # Getting the proper real data
+        raw_data, noise = Generating_Real_Data.get_real_data(signal_start, signal_length, detector)
+        
+        # Computing wavelet transform
+        transform, _ = MZ_Wavelet_Transforms.forward_wavelet_transform(3, raw_data)
+
+        # Computing possible jumps
+        jumps, _ = Singularity_Analysis.alpha_and_behavior_jumps(transform, ratio * 10 * noise, alpha)
+
+        print(f"Jumps for detector {detector}: {jumps}")
+
+        # Testing if no jumps are present
+        if jumps.size == 0:
+            detectors = np.append(detectors, detector)
+        
+    # Returning the results
+    print("HERHEHEHEREHRHER")
+    print(detectors)
+    return detectors
+
 
 # -------------------------------
 # create_jump_data
@@ -240,6 +289,9 @@ def determine_accuracy(ratios, alphas, jump_location, jump_noise_ratio, detector
 # -------------------------------
 # Running simulation of accuracy for numers different jump to noise ratios
 # -------------------------------
+
+# Getting the detectors that we care about
+detector_list = generate_detectors(detector_start, detector_end, start_index, total_number, 5, 0.75)
 
 # Setting up the path to store the figures
 SO_location = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
