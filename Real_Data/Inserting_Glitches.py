@@ -19,10 +19,15 @@ alpha_start = 0
 alpha_end = 1.00
 alpha_step = 0.1
 
-# Jump Sizes (jump size = noise * jump_ratio) to be tested 
-jump_ratio_start = 8
-jump_ratio_end = 10
-jump_ratio_step = 1
+# Glitch Height Sizes (jump size = noise * jump_ratio) to be tested 
+glitch_ratio_start = 10
+glitch_ratio_end = 10
+glitch_ratio_step = 1
+
+# Glitch sizes to be tested
+glitch_size_start = 1
+glitch_size_end = 5
+glitch_size_step = 1
 
 # The detectors to possibly look at
 detector_start = 0
@@ -39,11 +44,13 @@ time_end = 100000
 # Setting up the parameters that can be changed
 ratios = np.arange(ratio_start, ratio_end + ratio_step, ratio_step)
 alphas = np.arange(alpha_start, alpha_end + alpha_step, alpha_step)
-jump_ratios = np.arange(jump_ratio_start, jump_ratio_end + jump_ratio_step, jump_ratio_step)
+glitch_ratios = np.arange(glitch_ratio_start, glitch_ratio_end + glitch_ratio_step, glitch_ratio_step)
+glitch_sizes = np.arange(glitch_size_start, glitch_size_end + glitch_size_step, glitch_size_step)
 
 # Actually running the code
-for jump_ratio in jump_ratios:
+for glitch_ratio in glitch_ratios:
+    for glitch_size in glitch_sizes:
         # Running the simulations
-        _ = Testing_Parameters.determine_accuracy(0, ratios, alphas, jump_ratio, detector_start, detector_end, time_start, time_end)
+        _ = Testing_Parameters.determine_accuracy(glitch_size, ratios, alphas, glitch_ratio, detector_start, detector_end, time_start, time_end)
 
 print("Completed")

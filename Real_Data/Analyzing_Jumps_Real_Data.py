@@ -34,8 +34,8 @@ seperation = 1
 sqrt_synchronous = 4
 
 # Paraemeters for the time data to look at
-start_index = 0
-total_number = 100000
+time_start = 0
+time_end = 100000
 
 # Parameters for number of scales for the wavelet transform
 number_scales = 3
@@ -90,7 +90,7 @@ for i in range(sqrt_synchronous):
         Singularity_Analysis.print_colored(title_text, "blue")
 
         # Getting the real data
-        original_data, noise_level = Generating_Real_Data.get_real_data(start_index, total_number, current_detector)
+        original_data, noise_level = Generating_Real_Data.get_real_data(time_start, time_end, current_detector)
 
         print(f"Noise Level for {i}, {j}: {noise_level}")
         # Getting the power of noise and SNR for the signal itself
