@@ -306,7 +306,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     custom_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, colors, N = 256)
 
     # Plots of false negative ratio
-    im1 = axs[0].imshow(false_negatives, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.01)
+    im1 = axs[0].imshow(false_negatives, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 1.0)
     title_text1 = f"False Negative Rate with Artificially Added {anomaly_text} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Does (Doesn't) Flags the Artificial {anomaly_text0}"
     axs[0].set_title(title_text1, fontsize = 10)
     axs[0].set_xlabel('Alpha Threshold', fontsize = 8)
@@ -326,7 +326,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
             text = axs[0].text(j, i, f'{false_negatives[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
 
     # Plot of false positive ratio
-    im2 = axs[1].imshow(false_positives, cmap = custom_cmap, interpolation = 'nearest', vmax = 0.99)
+    im2 = axs[1].imshow(false_positives, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 1.0)
     title_text2 = f"False Positive Rate with Artificially Added {anomaly_text} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Doesn't (Does) Flag Other Anomalies"
     axs[1].set_title(title_text2, fontsize = 10)
     axs[1].set_xlabel('Alpha Threshold', fontsize = 8)
@@ -357,12 +357,12 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
 
     # Plot of combined information
     fig, axs = plt.subplots(1, 1, figsize=(10, 10))
-    im1 = axs.imshow(combined, cmap = custom_cmap, interpolation = 'nearest', vmax = 0.99)
+    im3 = axs.imshow(combined, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 2.0)
     title_text2 = f"Combined Results with Artificially Added {anomaly_text} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Good (Bad)"
     axs.set_title(title_text2, fontsize = 14)
     axs.set_xlabel('Alpha Threshold', fontsize = 12)
     axs.set_ylabel('Anomaly Threshold / Noise Ratio', fontsize = 12)
-    fig.colorbar(im1, ax = axs, shrink = 0.2, pad = 0.05)
+    fig.colorbar(im3, ax = axs, shrink = 0.2, pad = 0.05)
     axs.invert_yaxis()
     xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
     xtick_labels = [f'{tick:.2f}' for tick in xticks]

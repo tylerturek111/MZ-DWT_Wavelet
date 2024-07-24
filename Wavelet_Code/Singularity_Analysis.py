@@ -91,9 +91,7 @@ def compute_alpha_indexes(alpha_values, threshold):
 #                         The alpha values at every time point
 # -------------------------------
 
-def efficient_compute_alpha_values(transform_array, cone_slope, singularity_locations):
-    # time_1 = time.time()
-    
+def efficient_compute_alpha_values(transform_array, cone_slope, singularity_locations):    
     # Getting some size data
     length, scales = transform_array.shape
     number_singularity = singularity_locations.shape[0]
@@ -110,8 +108,6 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
     c_alpha_values = np.empty(number_singularity)
     o_alpha_values = np.empty(number_singularity + 1)
     alpha_values = np.empty(length)
-
-    # time_2 = time.time()
 
     # Computing the coefficients that we actually care about
     for scale in range(scales):
@@ -135,21 +131,23 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
 
             # Calculating the relevent o coefficients
             interested_o_indexes = np.arange(o_start_index, o_end_index, 1)
-            o_values[singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes]))
-            # o_values[singularity, scale] = np.mean(transform_values[interested_o_indexes])
+            if interested_o_indexes.size == 0:
+                o_values[singularity, scale] = 0
+            else:
+                o_values[singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes]))
 
         # The last region between the last index and the end
         if number_singularity != 0:
             o_start_index = max(singularity_locations[number_singularity - 1] + spread + 1, 0)
             o_end_index = length
             interested_o_indexes2 = np.arange(o_start_index, o_end_index, 1)
-            o_values[number_singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes2]))
-            # o_values[number_singularity, scale] = np.mean(transform_values[interested_o_indexes2])
+            if interested_o_indexes2.size == 0:
+                o_values[number_singularity, scale] = 0
+            else:
+                o_values[number_singularity, scale] = np.mean(np.abs(transform_values[interested_o_indexes2]))
 
     # Getting rid of all instances of 0 within the o_values to account for log(0) errors
     o_values[o_values == 0] = 0.000000001
-
-    # time_3 = time.time()
 
     # Calculating alpha values
     for singularity in range(number_singularity):
@@ -181,16 +179,6 @@ def efficient_compute_alpha_values(transform_array, cone_slope, singularity_loca
         o_alpha = np.polyfit(log_normalized_scale, log_current_o_row, 1)[0]
         o_alpha_values[number_singularity] = o_alpha
         alpha_values[singularity_locations[number_singularity - 1] + 1 : length] = o_alpha_values[number_singularity]
-    
-    # time_4 = time.time()
-
-    # print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
-    # print("Run times for efficient_compute_alpha_values FROM Jump_Analysis.py")
-    # print("Run time for setup", (time_2 - time_1) * 1000, "ms")
-    # print("Run time for calculating coefficients", (time_3 - time_2) * 1000, "ms")
-    # print("Run time for actually calculating alpha", (time_4 - time_3) * 1000, "ms")
-    # print("()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()()")
-    # print("")
 
     return(alpha_values)
 
