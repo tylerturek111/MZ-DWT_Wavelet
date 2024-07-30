@@ -31,7 +31,7 @@ glitch_size_step = 1
 
 # The detectors to possibly look at
 detector_start = 0
-detector_end = 10
+detector_end = 100
 
 # Data poitns to look at
 time_start = 0
@@ -54,3 +54,5 @@ for glitch_ratio in glitch_ratios:
         _ = Testing_Parameters.determine_accuracy(glitch_size, ratios, alphas, glitch_ratio, detector_start, detector_end, time_start, time_end)
 
 print("Completed")
+
+_ = Testing_Parameters.temp()

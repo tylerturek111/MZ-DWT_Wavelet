@@ -32,6 +32,10 @@ number_scales = 3
 # Square root of the band's frequency
 sqrt_frequency = 10
 
+
+# Temporary for alphas
+alpha_combined = np.array([])
+
 # -------------------------------
 # Setting up the storage location
 # -------------------------------
@@ -177,6 +181,7 @@ def create_glitch_data(detector, time_start, time_end, glitch_ratio, glitch_loca
 #                     1 if false positive occured, 0 otherwise
 # returns, RETURNS  : integer
 #                     1 if false negative occured, 0 otherwise
+# Temporary RETURNS : integer
 # -------------------------------
 
 def run_test(anomaly_type, anomaly, alpha, transform, anomaly_location):
@@ -187,7 +192,7 @@ def run_test(anomaly_type, anomaly, alpha, transform, anomaly_location):
     false_negative_count = 0.0
 
     # Computing anomaly locations with the developed methods
-    anomaly_locations, _ = Singularity_Analysis.alpha_and_behavior_jumps(transform, anomaly, alpha)
+    anomaly_locations, alpha_values = Singularity_Analysis.alpha_and_behavior_jumps(transform, anomaly, alpha)
 
     # Computing the number of false positives and false negatives
     # In the case of a jump
@@ -212,9 +217,9 @@ def run_test(anomaly_type, anomaly, alpha, transform, anomaly_location):
             else:
                 if anomaly_locations.size != 0:
                     false_positive_count = 1
-
+    
     # Returning the results
-    return false_positive_count, false_negative_count
+    return false_positive_count, false_negative_count, alpha_values
 
 # -------------------------------
 # determine_accuracy
@@ -247,10 +252,16 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     false_positives = np.empty((ratios.size, alphas.size))
     false_negatives = np.empty((ratios.size, alphas.size))
 
+    # Alphas
+    alpha_values = np.array([])
+    alpha_data = np.array([])
+
     for detector in range(detectors.size):
         # Getting a random anomaly location (included a little bit of buffer)
         # anomaly_location = random.randint(time_start + 100, time_end - 100)
         anomaly_location = 50000
+
+        print("Current Detector:", detectors[detector], "Anomaly of Size:", anomaly_type)
 
         # Creating the data
         if anomaly_type == 0:
@@ -287,9 +298,23 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
         # Running this for the different sets of ratio's and alphas for each detector
         for ratio in range(ratios.size):
             for alpha in range(alphas.size):
-                false_positive, false_negative = run_test(anomaly_type, ratios[ratio] * sqrt_frequency * noise, alphas[alpha], transform, anomaly_location - 1)
+                false_positive, false_negative, alpha_data = run_test(anomaly_type, ratios[ratio] * sqrt_frequency * noise, alphas[alpha], transform, anomaly_location - 1)
                 false_positives[ratio, alpha] = false_positives[ratio, alpha] + false_positive 
                 false_negatives[ratio, alpha] = false_negatives[ratio, alpha] + false_negative
+        
+        # Saving alpha values that we care about
+        alpha_values = np.append(alpha_values, alpha_data[anomaly_location - 1])
+        alpha_values = np.append(alpha_values, alpha_data[anomaly_location + anomaly_type - 1])
+
+        # # Creating a plot of the alphas
+        # time_axis2 = np.linspace(anomaly_location - 10, anomaly_location + 10, 20, endpoint=False)
+        # plt.plot(time_axis2, alpha_data[anomaly_location - 10 : anomaly_location + 10])
+        # plt.axvline(x = anomaly_location - 1, color = "g", linestyle = "--")
+        # plt.axvline(x = anomaly_location + anomaly_type - 1, color = "g", linestyle = "--")
+        # file_name = f"Alpha_{anomaly_type}_{detectors[detector]}.png"
+        # path = os.path.join(heat_maps_path, file_name)
+        # plt.savefig(path)
+        # plt.close()
 
     # Getting the counts to become ratios
     false_positives = false_positives / detectors.size
@@ -344,11 +369,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     for i in range(false_positives.shape[0]):
         for j in range(false_positives.shape[1]):
             text = axs[1].text(j, i, f'{false_positives[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
-    
-    # Saving the plots
     plt.tight_layout()
-
-    # Saving the plots
     file_name = f"Heat_Map_{anomaly_text0}_{anomaly_ratio}_{anomaly_type}.png"
     path = os.path.join(heat_maps_path, file_name)
     fig.savefig(path)
@@ -375,12 +396,52 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     for i in range(combined.shape[0]):
         for j in range(combined.shape[1]):
             text = axs.text(j, i, f'{combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 8)
-
-    # Saving the plot
     file_name = f"Combined_Heat_Map_{anomaly_text0}_{anomaly_ratio}_{anomaly_type}.png"
     path = os.path.join(heat_maps_path, file_name)
     fig.savefig(path)
 
     plt.close()
 
+    global alpha_combined
+    # Temporary plot of the alpha values
+    bin_values = np.arange(-2, 2 + 0.10, 0.10)
+    if anomaly_type !=  0:
+        # Temp
+        if alpha_combined.size == 0:
+            alpha_combined = alpha_values
+        else:
+            alpha_combined = np.concatenate((alpha_combined, alpha_values))
+
+        # Plotting alpha values for a particular glitch size
+        plt.hist(alpha_values, bins = bin_values, edgecolor='black')
+        title_text3 = f"Histograph of Alpha Values with {anomaly_text}"
+        plt.title(title_text3, fontsize = 14)
+        plt.xlabel('Alpha Value')
+        plt.ylabel('Frequency')
+        plt.xlim(-2, 2)
+        file_name = f"Alpha_Values_{anomaly_text0}_{anomaly_type}.png"
+        path = os.path.join(heat_maps_path, file_name)
+        plt.savefig(path)
+
+        plt.close()
+    
     return 0
+
+def temp():
+    # Create histogram
+    plt.hist(alpha_combined, bins=10, edgecolor='black')
+
+    # Add titles and labels
+    title_text4 = f"Histograph of Alpha Values for all Glitch Sizes"
+
+    plt.title(title_text4, fontsize = 14)
+    plt.xlabel('Alpha Value')
+    plt.ylabel('Frequency')
+    plt.xlim(-2, 2)
+         
+    # Saving the plot
+    file_name = f"Alpha_Values.png"
+    path = os.path.join(heat_maps_path, file_name)
+    plt.savefig(path)
+
+    plt.close()
