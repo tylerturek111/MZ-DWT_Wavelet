@@ -10,14 +10,14 @@ import numpy as np
 # -------------------------------
 
 # Anomaly Threshold (anomaly threshold = noise * ratio) values to be tested
-ratio_start = 4
-ratio_end = 5
-ratio_step = 0.1
+ratio_start = 4.0
+ratio_end = 5.50
+ratio_step = 0.-75
 
 # Alpha Threshold values to be tested
 alpha_start = 0
-alpha_end = 1.00
-alpha_step = 0.1
+alpha_end = 2.00
+alpha_step = 0.10
 
 # Glitch Height Sizes (jump size = noise * jump_ratio) to be tested 
 glitch_ratio_start = 10
@@ -31,7 +31,7 @@ glitch_size_step = 1
 
 # The detectors to possibly look at
 detector_start = 0
-detector_end = 100
+detector_end = 10
 
 # Data poitns to look at
 time_start = 0
@@ -52,7 +52,6 @@ for glitch_ratio in glitch_ratios:
     for glitch_size in glitch_sizes:
         # Running the simulations
         _ = Testing_Parameters.determine_accuracy(glitch_size, ratios, alphas, glitch_ratio, detector_start, detector_end, time_start, time_end)
+    _ = Testing_Parameters.generate_summary_plots(glitch_size, glitch_ratio, ratios, alphas)
 
 print("Completed")
-
-_ = Testing_Parameters.temp()

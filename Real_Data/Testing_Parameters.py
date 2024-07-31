@@ -33,8 +33,10 @@ number_scales = 3
 sqrt_frequency = 10
 
 
-# Temporary for alphas
+# Global Variables
 alpha_combined = np.array([])
+false_positive_combined = np.array([])
+false_negative_combined = np.array([])
 
 # -------------------------------
 # Setting up the storage location
@@ -252,9 +254,18 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     false_positives = np.empty((ratios.size, alphas.size))
     false_negatives = np.empty((ratios.size, alphas.size))
 
-    # Alphas
+    # Setting up alphas
     alpha_values = np.array([])
     alpha_data = np.array([])
+    global alpha_combined
+
+    # Setting up false positive and false negative global variables
+    global false_positive_combined
+    global false_negative_combined
+    if false_positive_combined.size == 0:
+        false_positive_combined = np.empty((ratios.size, alphas.size))
+    if false_negative_combined.size == 0:
+        false_negative_combined = np.empty((ratios.size, alphas.size))
 
     for detector in range(detectors.size):
         # Getting a random anomaly location (included a little bit of buffer)
@@ -276,24 +287,24 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
         # The time axis
         time_axis = np.linspace(0, time_end - time_start, time_end - time_start, endpoint=False)
 
-        # Creating a plot of the data
-        plt.plot(time_axis, data)
-        plt.axvline(x = anomaly_location - 1, color = "r", linestyle = "--")
-        file_name = f"Signal_{detectors[detector]}.png"
-        path = os.path.join(heat_maps_path, file_name)
-        plt.savefig(path)
-        plt.close()
+        # # Creating a plot of the data
+        # plt.plot(time_axis, data)
+        # plt.axvline(x = anomaly_location - 1, color = "r", linestyle = "--")
+        # file_name = f"Signal_{detectors[detector]}.png"
+        # path = os.path.join(heat_maps_path, file_name)
+        # plt.savefig(path)
+        # plt.close()
 
-        # Creating a plot of the transform
-        plt.plot(time_axis, transform)
-        plt.axhline(y = noise * 10 * ratios[0], color = "g", linestyle = "--")
-        plt.axhline(y = - 1 * noise * 10 * ratios[0], color = "g", linestyle = "--")
-        plt.axhline(y = noise * 10 * ratios[ratios.size - 1], color = "r", linestyle = "--")
-        plt.axhline(y = - 1 * noise * 10 * ratios[ratios.size - 1], color = "r", linestyle = "--")
-        file_name = f"Transform_{detectors[detector]}.png"
-        path = os.path.join(heat_maps_path, file_name)
-        plt.savefig(path)
-        plt.close()
+        # # Creating a plot of the transform
+        # plt.plot(time_axis, transform)
+        # plt.axhline(y = noise * 10 * ratios[0], color = "g", linestyle = "--")
+        # plt.axhline(y = - 1 * noise * 10 * ratios[0], color = "g", linestyle = "--")
+        # plt.axhline(y = noise * 10 * ratios[ratios.size - 1], color = "r", linestyle = "--")
+        # plt.axhline(y = - 1 * noise * 10 * ratios[ratios.size - 1], color = "r", linestyle = "--")
+        # file_name = f"Transform_{detectors[detector]}.png"
+        # path = os.path.join(heat_maps_path, file_name)
+        # plt.savefig(path)
+        # plt.close()
 
         # Running this for the different sets of ratio's and alphas for each detector
         for ratio in range(ratios.size):
@@ -319,8 +330,11 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     # Getting the counts to become ratios
     false_positives = false_positives / detectors.size
     false_negatives = false_negatives / detectors.size
-
     combined = false_positives + false_negatives
+
+    # Getting global count
+    false_positive_combined = false_positive_combined + false_positives
+    false_negative_combined = false_negative_combined + false_negatives
 
     # Plotting the results
     fig, axs = plt.subplots(1, 2, figsize=(10, 10))
@@ -396,14 +410,13 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     for i in range(combined.shape[0]):
         for j in range(combined.shape[1]):
             text = axs.text(j, i, f'{combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 8)
-    file_name = f"Combined_Heat_Map_{anomaly_text0}_{anomaly_ratio}_{anomaly_type}.png"
+    file_name = f"Combined_Heat_Map_{anomaly_text0}_{anomaly_type}_{anomaly_ratio}.png"
     path = os.path.join(heat_maps_path, file_name)
     fig.savefig(path)
 
     plt.close()
 
-    global alpha_combined
-    # Temporary plot of the alpha values
+    # Plot of the alpha values
     bin_values = np.arange(-2, 2 + 0.10, 0.10)
     if anomaly_type !=  0:
         # Temp
@@ -427,21 +440,122 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     
     return 0
 
-def temp():
+# -------------------------------
+# generate_summary_plots
+# Generates summary plots of the data
+# anomaly_type      : integer
+#                     The type of analysis to be done (0 for jumps, n for glitches of size n)
+# anomaly_ratio     : integer
+#                     Ratio of anomaly / noise
+# ratios            : array
+#                     Ratios of anomaly threshold / noise
+# alphas            : array
+#                     The alpha values to be tested
+# RETURNS           : integer
+#                     Means nothing
+# -------------------------------
+
+def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     # Create histogram
     plt.hist(alpha_combined, bins=10, edgecolor='black')
-
-    # Add titles and labels
     title_text4 = f"Histograph of Alpha Values for all Glitch Sizes"
-
     plt.title(title_text4, fontsize = 14)
     plt.xlabel('Alpha Value')
     plt.ylabel('Frequency')
     plt.xlim(-2, 2)
-         
-    # Saving the plot
-    file_name = f"Alpha_Values.png"
+    file_name = f"SUMMARY_Alpha_Values.png"
     path = os.path.join(heat_maps_path, file_name)
     plt.savefig(path)
+
+    plt.close()
+
+    # Setting up stuff for plots
+    global false_positive_combined
+    global false_negative_combined
+    combined_combined = false_positive_combined + false_negative_combined
+    if anomaly_type == 0:
+        anomaly_text = "Jump"
+        anomaly_text0 = "Jump"
+    else:
+        anomaly_text = f"Glitch of Size {anomaly_type}"
+        anomaly_text0 = "Glitch"
+
+    # Plotting false positive and false negative combined
+    fig, axs = plt.subplots(1, 2, figsize=(10, 10))
+    colors = [(0, 1, 0), (1, 0, 0)] 
+    cmap_name = 'green_red'
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list(cmap_name, colors, N = 256)
+
+    # Plots of false negative ratio combined
+    im1 = axs[0].imshow(false_negative_combined, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 5.0)
+    title_text1 = f"False Negative Rate Across all {anomaly_text0} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Does (Doesn't) Flags the Artificial {anomaly_text0}"
+    axs[0].set_title(title_text1, fontsize = 10)
+    axs[0].set_xlabel('Alpha Threshold', fontsize = 8)
+    axs[0].set_ylabel('Anomaly Threshold / Noise Ratio', fontsize = 8)
+    fig.colorbar(im1, ax = axs[0], shrink = 0.2, pad = 0.05)
+    axs[0].invert_yaxis()
+    xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
+    xtick_labels = [f'{tick:.2f}' for tick in xticks]
+    axs[0].set_xticks(np.linspace(0, alphas.size - 1, 11))
+    axs[0].set_xticklabels(xtick_labels, fontsize = 6)
+    yticks = np.linspace(ratios[0], ratios[ratios.size - 1], 11)
+    ytick_labels = [f'{tick:.2f}' for tick in yticks]
+    axs[0].set_yticks(np.linspace(0, ratios.size - 1, 11))
+    axs[0].set_yticklabels(ytick_labels, fontsize = 6)
+    for i in range(false_negative_combined.shape[0]):
+        for j in range(false_negative_combined.shape[1]):
+            text = axs[0].text(j, i, f'{false_negative_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
+    
+    # Plot of false positive ratio combined
+    im2 = axs[1].imshow(false_positive_combined, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 5.0)
+    title_text2 = f"False Positive Rate Across all {anomaly_text0} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Doesn't (Does) Flag Other Anomalies"
+    axs[1].set_title(title_text2, fontsize = 10)
+    axs[1].set_xlabel('Alpha Threshold', fontsize = 8)
+    axs[1].set_ylabel('Anomaly Threshold / Noise Ratio', fontsize = 8)
+    fig.colorbar(im2, ax = axs[1], shrink = 0.2, pad = 0.05)
+    axs[1].invert_yaxis()
+    xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
+    xtick_labels = [f'{tick:.2f}' for tick in xticks]
+    axs[1].set_xticks(np.linspace(0, alphas.size - 1, 11))
+    axs[1].set_xticklabels(xtick_labels, fontsize = 6)
+    yticks = np.linspace(ratios[0], ratios[ratios.size - 1], 11)
+    ytick_labels = [f'{tick:.2f}' for tick in yticks]
+    axs[1].set_yticks(np.linspace(0, ratios.size - 1, 11))
+    axs[1].set_yticklabels(ytick_labels, fontsize = 6)
+    for i in range(false_positive_combined.shape[0]):
+        for j in range(false_positive_combined.shape[1]):
+            text = axs[1].text(j, i, f'{false_positive_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
+    
+    # Saving the plots
+    plt.tight_layout()
+    file_name = f"SUMMARY_Heat_Map_{anomaly_text0}_{anomaly_ratio}.png"
+    path = os.path.join(heat_maps_path, file_name)
+    fig.savefig(path)
+
+    plt.close()
+
+    # Plot of combined information
+    fig, axs = plt.subplots(1, 1, figsize=(10, 10))
+    im3 = axs.imshow(combined_combined, cmap = custom_cmap, interpolation = 'nearest', vmin = 0.0, vmax = 5.0)
+    title_text2 = f"Combined Results Across all {anomaly_text0} \n With {anomaly_text0}/Noise Ratio of {anomaly_ratio} \n Green (Red) Indicates Good (Bad)"
+    axs.set_title(title_text2, fontsize = 14)
+    axs.set_xlabel('Alpha Threshold', fontsize = 12)
+    axs.set_ylabel('Anomaly Threshold / Noise Ratio', fontsize = 12)
+    fig.colorbar(im3, ax = axs, shrink = 0.2, pad = 0.05)
+    axs.invert_yaxis()
+    xticks = np.linspace(alphas[0], alphas[alphas.size - 1], 11)
+    xtick_labels = [f'{tick:.2f}' for tick in xticks]
+    axs.set_xticks(np.linspace(0, alphas.size - 1, 11))
+    axs.set_xticklabels(xtick_labels, fontsize = 10)
+    yticks = np.linspace(ratios[0], ratios[ratios.size - 1], 11)
+    ytick_labels = [f'{tick:.2f}' for tick in yticks]
+    axs.set_yticks(np.linspace(0, ratios.size - 1, 11))
+    axs.set_yticklabels(ytick_labels, fontsize = 10)
+    for i in range(combined_combined.shape[0]):
+        for j in range(combined_combined.shape[1]):
+            text = axs.text(j, i, f'{combined_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 8)
+    file_name = f"SUMMARY_Combined_Heat_Map_{anomaly_text0}_{anomaly_ratio}.png"
+    path = os.path.join(heat_maps_path, file_name)
+    fig.savefig(path)
 
     plt.close()
