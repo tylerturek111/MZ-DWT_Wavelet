@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import random
 import shutil
+import math
 
 # ()()()()()()()()()()()()()
 # This file tests how the functions behave with various parameters
@@ -42,13 +43,27 @@ false_negative_combined = np.array([])
 # Setting up the storage location
 # -------------------------------
 
-# Location for the plots to be stored
+# Location for the plots to be stored for heat maps (Part 1)
 SO_location = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
-heat_maps = 'Heat_Maps'
-heat_maps_path = os.path.join(SO_location, heat_maps)
+heat_maps_folder = 'Heat_Maps'
+heat_maps_path = os.path.join(SO_location, heat_maps_folder)
 if os.path.exists(heat_maps_path):
     shutil.rmtree(heat_maps_path)
 os.makedirs(heat_maps_path)
+
+# Location for the plots to be stored for parameter testing (Part 2)
+SO_location = os.path.abspath(os.path.join(os.getcwd(), '..', '..'))
+parameter_tests_folder = 'Parameter_Tests'
+parameter_tests_path = os.path.join(SO_location, parameter_tests_folder)
+if os.path.exists(parameter_tests_path):
+    shutil.rmtree(parameter_tests_path)
+os.makedirs(parameter_tests_path)
+
+# -------------------------------
+# -------------------------------
+# PART 1
+# -------------------------------
+# -------------------------------
 
 # -------------------------------
 # generate_detectors
@@ -195,7 +210,7 @@ def run_test(anomaly_type, anomaly, alpha, transform, anomaly_location):
 
     # Computing anomaly locations with the developed methods
     anomaly_locations, alpha_values = Singularity_Analysis.alpha_and_behavior_jumps(transform, anomaly, alpha)
-
+    
     # Computing the number of false positives and false negatives
     # In the case of a jump
     if anomaly_type == 0:
@@ -269,8 +284,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
 
     for detector in range(detectors.size):
         # Getting a random anomaly location (included a little bit of buffer)
-        # anomaly_location = random.randint(time_start + 100, time_end - 100)
-        anomaly_location = 50000
+        anomaly_location = random.randint(time_start + 100, time_end - 100)
 
         print("Current Detector:", detectors[detector], "Anomaly of Size:", anomaly_type)
 
@@ -307,9 +321,14 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
         # plt.close()
 
         # Running this for the different sets of ratio's and alphas for each detector
+        run_through = 0
         for ratio in range(ratios.size):
             for alpha in range(alphas.size):
-                false_positive, false_negative, alpha_data = run_test(anomaly_type, ratios[ratio] * sqrt_frequency * noise, alphas[alpha], transform, anomaly_location - 1)
+                if run_through == 0:
+                    false_positive, false_negative, alpha_data = run_test(anomaly_type, ratios[ratio] * sqrt_frequency * noise, alphas[alpha], transform, anomaly_location - 1)
+                    run_through = 1
+                else:
+                    false_positive, false_negative, _ = run_test(anomaly_type, ratios[ratio] * sqrt_frequency * noise, alphas[alpha], transform, anomaly_location - 1)
                 false_positives[ratio, alpha] = false_positives[ratio, alpha] + false_positive 
                 false_negatives[ratio, alpha] = false_negatives[ratio, alpha] + false_negative
         
@@ -360,6 +379,8 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs[0].set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs[0].set_yticklabels(ytick_labels, fontsize = 6)
+    if np.max(ratios) > anomaly_ratio:        
+        axs[0].axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(false_negatives.shape[0]):
         for j in range(false_negatives.shape[1]):
             text = axs[0].text(j, i, f'{false_negatives[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
@@ -380,6 +401,8 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs[1].set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs[1].set_yticklabels(ytick_labels, fontsize = 6)
+    if np.max(ratios) > anomaly_ratio:        
+        axs[1].axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(false_positives.shape[0]):
         for j in range(false_positives.shape[1]):
             text = axs[1].text(j, i, f'{false_positives[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
@@ -407,6 +430,8 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs.set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs.set_yticklabels(ytick_labels, fontsize = 10)
+    if np.max(ratios) > anomaly_ratio:        
+        axs.axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(combined.shape[0]):
         for j in range(combined.shape[1]):
             text = axs.text(j, i, f'{combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 8)
@@ -419,7 +444,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
     # Plot of the alpha values
     bin_values = np.arange(-2, 2 + 0.10, 0.10)
     if anomaly_type !=  0:
-        # Temp
+        # Saving the alpha values
         if alpha_combined.size == 0:
             alpha_combined = alpha_values
         else:
@@ -433,6 +458,23 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
         plt.ylabel('Frequency')
         plt.xlim(-2, 2)
         file_name = f"Alpha_Values_{anomaly_text0}_{anomaly_type}.png"
+        path = os.path.join(heat_maps_path, file_name)
+        plt.savefig(path)
+
+        plt.close()
+
+        # Setting up our particular parameters
+        log_alpha_values = np.abs(alpha_values)
+        log_bin_values = np.logspace(-1, 0, 41)
+
+        # Plotting the alpha values for a particular glitch size with a log scale
+        plt.hist(log_alpha_values, bins = log_bin_values, edgecolor='black')
+        title_text3 = f"Logarithmic Histograph of Alpha Values with {anomaly_text}"
+        plt.title(title_text3, fontsize = 14)
+        plt.xscale('log')
+        plt.xlabel('Log of Alpha Value')
+        plt.ylabel('Frequency')
+        file_name = f"Alpha_Values_Log_{anomaly_text0}_{anomaly_type}.png"
         path = os.path.join(heat_maps_path, file_name)
         plt.savefig(path)
 
@@ -456,7 +498,7 @@ def determine_accuracy(anomaly_type, ratios, alphas, anomaly_ratio, detector_sta
 # -------------------------------
 
 def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
-    # Create histogram
+    # Plotting all the alpha values
     plt.hist(alpha_combined, bins=10, edgecolor='black')
     title_text4 = f"Histograph of Alpha Values for all Glitch Sizes"
     plt.title(title_text4, fontsize = 14)
@@ -464,6 +506,23 @@ def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     plt.ylabel('Frequency')
     plt.xlim(-2, 2)
     file_name = f"SUMMARY_Alpha_Values.png"
+    path = os.path.join(heat_maps_path, file_name)
+    plt.savefig(path)
+
+    plt.close()
+
+    # Setting up our particular parameters
+    log_alpha_combined = np.abs(alpha_combined)
+    log_bin_values = np.logspace(-1, 0, 41)
+
+    # Plotting all the alpha values with a log scale
+    plt.hist(log_alpha_combined, bins = log_bin_values, edgecolor='black')
+    title_text3 = f"Logirthmic Histograph of Alpha Values for all Glitch Sizes"
+    plt.title(title_text3, fontsize = 14)
+    plt.xscale('log')
+    plt.xlabel('Log of Alpha Value')
+    plt.ylabel('Frequency')
+    file_name = f"SUMMARY_Alpha_Values_Log.png"
     path = os.path.join(heat_maps_path, file_name)
     plt.savefig(path)
 
@@ -502,6 +561,8 @@ def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs[0].set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs[0].set_yticklabels(ytick_labels, fontsize = 6)
+    if np.max(ratios) > anomaly_ratio:        
+        axs[0].axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(false_negative_combined.shape[0]):
         for j in range(false_negative_combined.shape[1]):
             text = axs[0].text(j, i, f'{false_negative_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
@@ -522,6 +583,8 @@ def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs[1].set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs[1].set_yticklabels(ytick_labels, fontsize = 6)
+    if np.max(ratios) > anomaly_ratio:        
+        axs[1].axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(false_positive_combined.shape[0]):
         for j in range(false_positive_combined.shape[1]):
             text = axs[1].text(j, i, f'{false_positive_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 4)
@@ -551,6 +614,8 @@ def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     ytick_labels = [f'{tick:.2f}' for tick in yticks]
     axs.set_yticks(np.linspace(0, ratios.size - 1, 11))
     axs.set_yticklabels(ytick_labels, fontsize = 10)
+    if np.max(ratios) > anomaly_ratio:        
+        axs.axhline(y = anomaly_ratio - ratios[0], color = 'blue', linestyle = '--', linewidth = 3)
     for i in range(combined_combined.shape[0]):
         for j in range(combined_combined.shape[1]):
             text = axs.text(j, i, f'{combined_combined[i, j]:.2f}', ha='center', va='center', color='black', fontsize = 8)
@@ -559,3 +624,130 @@ def generate_summary_plots(anomaly_type, anomaly_ratio, ratios, alphas):
     fig.savefig(path)
 
     plt.close()
+
+# -------------------------------
+# -------------------------------
+# PART 2
+# -------------------------------
+# -------------------------------
+
+# -------------------------------
+# parameter_tests
+# Runs anomaly analysis with sepcified parameters across different sizes to test accuracy
+# anomaly_lengths   : array
+#                     The length of the analysis (0 for jumps, n for glitches of size n)
+# ratio             : integer
+#                     Ratio of anomaly threshold / noise
+# alpha             : integer
+#                     The alpha value to be tested
+# anomaly_ratios    : array
+#                     Ratios of anomaly / noise
+# detector_start    : integer
+#                     The detector to start at
+# detector_end      : integer
+#                     The detector to end at
+# time_start        : integer
+#                     The start index of the data
+# time_end          : integer
+#                     The length of data to look at
+# RETURNS           : integer
+#                     Means nothing
+# -------------------------------
+
+def parameter_tests(anomaly_lengths, ratio, alpha, anomaly_ratios, detector_start, detector_end, time_start, time_end):
+    # Getting the detectors that we care about
+    detectors = generate_detectors(detector_start, detector_end, time_start, time_end, 5, 0.75)
+
+    # Setting up where to store false positives and false negatives
+    false_positives = np.zeros((anomaly_lengths.size, anomaly_ratios.size))
+    false_negatives = np.zeros((anomaly_lengths.size, anomaly_ratios.size))
+
+    # Setting up the time axis
+    time_axis = np.linspace(0, time_end - time_start, time_end - time_start, endpoint=False)
+
+    # Iterating across
+    for h_size in range(anomaly_lengths.size):
+        for v_size in range(anomaly_ratios.size):
+            for detector in range(detectors.size):
+                # Output to track progress
+                print("Anomaly of Size", anomaly_lengths[h_size], "Anomaly Ratio", anomaly_ratios[v_size], "Detector", detectors[detector])
+                
+                # Setting up random anomaly location
+                anomaly_location = random.randint(time_start + 100, time_end - 100)
+
+                # Creating data based on jump or glitch
+                if anomaly_lengths[h_size] == 0:
+                    data, transform, noise = create_jump_data(detectors[detector], time_start, time_end, anomaly_ratios[v_size], anomaly_location)
+                else:
+                    data, transform, noise = create_glitch_data(detectors[detector], time_start, time_end, anomaly_ratios[v_size], anomaly_location, anomaly_lengths[h_size])
+
+                # Running the test
+                false_positive, false_negative, _ = run_test(anomaly_lengths[h_size], ratio * sqrt_frequency * noise, alpha, transform, anomaly_location - 1)
+
+                # Savint he false positive value
+                false_positives[h_size, v_size] = false_positives[h_size, v_size] + false_positive 
+                false_negatives[h_size, v_size] = false_negatives[h_size, v_size] + false_negative
+    
+    # Converting false positive and false negative counts to a ratio
+    false_positives = np.round(false_positives / detectors.size, 2)
+    false_negatives = np.round(false_negatives / detectors.size, 2)
+
+    print("Positive", false_positives)
+    print("Negative", false_negatives)
+
+    # Creating graphs of the data based on anomaly sizes
+    fig, axes = plt.subplots(anomaly_lengths.size, 2, figsize=(12, 15))
+    fig.suptitle(f"False Positive and Negative Rates \n For Varing Anomaly Sizes and Lengths", fontsize = 20)
+    for i in range(anomaly_lengths.size):
+        if anomaly_lengths[i] == 0:
+            subtitle_text = "Jumps"
+        else:
+            subtitle_text = f"Glitches of Length {anomaly_lengths[i]}"
+        # False negatives in left column
+        ax_negative = axes[i, 0]
+        bars_negative = ax_negative.bar(anomaly_ratios, false_negatives[i], width = 0.5, color= "red", alpha = 0.7)
+        ax_negative.set_title(f"False Negatives for {subtitle_text}", fontsize = 14)
+        ax_negative.set_xlabel("Anomaly Size", fontsize = 10)
+        ax_negative.set_ylabel("False Negatives", fontsize = 10)
+        ax_negative.set_ylim(0, 1.2)
+        ax_negative.set_yticks(np.arange(0, 1.4, 6))
+        ax_negative.set_xticks(anomaly_ratios) 
+        ax_negative.set_xticks(np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1))
+        ax_negative.set_xticklabels([f"{x:.1f}" for x in np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1)], rotation=45)
+        for bar in bars_negative:
+            height = bar.get_height()
+            ax_negative.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha = "center", va = "bottom", fontsize=9)
+
+        
+        # False positives in right column
+        ax_positive = axes[i, 1]
+        bars_positive = ax_positive.bar(anomaly_ratios, false_positives[i], width = 0.5, color= "red", alpha = 0.7)
+        ax_positive.set_title(f"False Positives for {subtitle_text}", fontsize = 14)
+        ax_positive.set_xlabel("Anomaly Size", fontsize = 10)
+        ax_positive.set_ylabel("False Negatives", fontsize = 10)
+        ax_positive.set_ylim(0, 1.2)
+        ax_positive.set_yticks(np.arange(0, 1.4, 6))
+        ax_positive.set_xticks(anomaly_ratios) 
+        ax_positive.set_xticks(np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1))
+        ax_positive.set_xticklabels([f"{x:.1f}" for x in np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1)], rotation=45)
+        for bar in bars_positive:
+            height = bar.get_height()
+            ax_positive.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha = "center", va = "bottom", fontsize=9)
+
+    # Add separate titles for left and right columns
+    fig.text(0.50, 0.95, f"Anomaly Threshold of {ratio} times Noise and Alpha Threshold of {alpha}", ha = "center" , va = "center", fontsize = 16)
+    fig.text(0.25, 0.85, "False Negatives", ha = "center", va = "center", fontsize = 14)
+    fig.text(0.75, 0.85, "False Positives", ha = "center", va = "center", fontsize = 14)
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout(rect=[0, 0, 1, 0.9])
+
+    # Saving the plot
+    file_name = f"Parameter_Tests.png"
+    path = os.path.join(parameter_tests_path, file_name)
+    fig.savefig(path)
+
+    # Closing it all out
+    plt.close()
+
+    return 0
