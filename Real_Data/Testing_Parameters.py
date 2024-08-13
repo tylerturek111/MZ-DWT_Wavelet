@@ -659,18 +659,19 @@ def parameter_tests(anomaly_lengths, ratio, alpha, anomaly_ratios, detector_star
     detectors = generate_detectors(detector_start, detector_end, time_start, time_end, 5, 0.75)
 
     # Setting up where to store false positives and false negatives
-    false_positives = np.zeros((anomaly_lengths.size, anomaly_ratios.size))
+    false_positives = 0
     false_negatives = np.zeros((anomaly_lengths.size, anomaly_ratios.size))
 
     # Setting up the time axis
     time_axis = np.linspace(0, time_end - time_start, time_end - time_start, endpoint=False)
 
     # Iterating across
+    index = 0
     for h_size in range(anomaly_lengths.size):
         for v_size in range(anomaly_ratios.size):
             for detector in range(detectors.size):
                 # Output to track progress
-                print("Anomaly of Size", anomaly_lengths[h_size], "Anomaly Ratio", anomaly_ratios[v_size], "Detector", detectors[detector])
+                print("Anomaly of Length", anomaly_lengths[h_size], "Anomaly of Size", anomaly_ratios[v_size], "Detector", detectors[detector])
                 
                 # Setting up random anomaly location
                 anomaly_location = random.randint(time_start + 100, time_end - 100)
@@ -685,30 +686,35 @@ def parameter_tests(anomaly_lengths, ratio, alpha, anomaly_ratios, detector_star
                 false_positive, false_negative, _ = run_test(anomaly_lengths[h_size], ratio * sqrt_frequency * noise, alpha, transform, anomaly_location - 1)
 
                 # Savint he false positive value
-                false_positives[h_size, v_size] = false_positives[h_size, v_size] + false_positive 
+                if index == 0:
+                    false_positives = false_positives + false_positive
+                # false_positives = false_positives + false_positive
                 false_negatives[h_size, v_size] = false_negatives[h_size, v_size] + false_negative
+
+            index = 1
     
     # Converting false positive and false negative counts to a ratio
-    false_positives = np.round(false_positives / detectors.size, 2)
+    false_positives = round(false_positives / detectors.size, 2)
     false_negatives = np.round(false_negatives / detectors.size, 2)
+    print(false_positives)
 
     print("Positive", false_positives)
     print("Negative", false_negatives)
 
     # Creating graphs of the data based on anomaly sizes
-    fig, axes = plt.subplots(anomaly_lengths.size, 2, figsize=(12, 15))
-    fig.suptitle(f"False Positive and Negative Rates \n For Varing Anomaly Sizes and Lengths", fontsize = 20)
+    fig, axes = plt.subplots(anomaly_lengths.size, 1, figsize=(12, 15))
+    fig.suptitle(f"False Negative Rates \n For Varing Anomaly Sizes and Lengths", fontsize = 30, fontweight = "bold")
     for i in range(anomaly_lengths.size):
         if anomaly_lengths[i] == 0:
             subtitle_text = "Jumps"
         else:
             subtitle_text = f"Glitches of Length {anomaly_lengths[i]}"
         # False negatives in left column
-        ax_negative = axes[i, 0]
+        ax_negative = axes[i]
         bars_negative = ax_negative.bar(anomaly_ratios, false_negatives[i], width = 0.5, color= "red", alpha = 0.7)
-        ax_negative.set_title(f"False Negatives for {subtitle_text}", fontsize = 14)
+        ax_negative.set_title(f"False Negative Rate for {subtitle_text}", fontsize = 14)
         ax_negative.set_xlabel("Anomaly Size", fontsize = 10)
-        ax_negative.set_ylabel("False Negatives", fontsize = 10)
+        ax_negative.set_ylabel("False Negative Rate", fontsize = 10)
         ax_negative.set_ylim(0, 1.2)
         ax_negative.set_yticks(np.arange(0, 1.4, 6))
         ax_negative.set_xticks(anomaly_ratios) 
@@ -719,25 +725,25 @@ def parameter_tests(anomaly_lengths, ratio, alpha, anomaly_ratios, detector_star
             ax_negative.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha = "center", va = "bottom", fontsize=9)
 
         
-        # False positives in right column
-        ax_positive = axes[i, 1]
-        bars_positive = ax_positive.bar(anomaly_ratios, false_positives[i], width = 0.5, color= "red", alpha = 0.7)
-        ax_positive.set_title(f"False Positives for {subtitle_text}", fontsize = 14)
-        ax_positive.set_xlabel("Anomaly Size", fontsize = 10)
-        ax_positive.set_ylabel("False Negatives", fontsize = 10)
-        ax_positive.set_ylim(0, 1.2)
-        ax_positive.set_yticks(np.arange(0, 1.4, 6))
-        ax_positive.set_xticks(anomaly_ratios) 
-        ax_positive.set_xticks(np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1))
-        ax_positive.set_xticklabels([f"{x:.1f}" for x in np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1)], rotation=45)
-        for bar in bars_positive:
-            height = bar.get_height()
-            ax_positive.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha = "center", va = "bottom", fontsize=9)
+        # # False positives in right column
+        # ax_positive = axes[i, 1]
+        # bars_positive = ax_positive.bar(anomaly_ratios, false_positives[i], width = 0.5, color= "red", alpha = 0.7)
+        # ax_positive.set_title(f"False Positives for {subtitle_text}", fontsize = 14)
+        # ax_positive.set_xlabel("Anomaly Size", fontsize = 10)
+        # ax_positive.set_ylabel("False Negatives", fontsize = 10)
+        # ax_positive.set_ylim(0, 1.2)
+        # ax_positive.set_yticks(np.arange(0, 1.4, 6))
+        # ax_positive.set_xticks(anomaly_ratios) 
+        # ax_positive.set_xticks(np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1))
+        # ax_positive.set_xticklabels([f"{x:.1f}" for x in np.arange(min(anomaly_ratios), max(anomaly_ratios) + 1, 1)], rotation=45)
+        # for bar in bars_positive:
+        #     height = bar.get_height()
+        #     ax_positive.text(bar.get_x() + bar.get_width() / 2, height, f"{height:.2f}", ha = "center", va = "bottom", fontsize=9)
 
     # Add separate titles for left and right columns
-    fig.text(0.50, 0.95, f"Anomaly Threshold of {ratio} times Noise and Alpha Threshold of {alpha}", ha = "center" , va = "center", fontsize = 16)
-    fig.text(0.25, 0.85, "False Negatives", ha = "center", va = "center", fontsize = 14)
-    fig.text(0.75, 0.85, "False Positives", ha = "center", va = "center", fontsize = 14)
+    fig.text(0.50, 0.89, f"Anomaly Threshold of {ratio} times Noise and Alpha Threshold of {alpha}", ha = "center" , va = "center", fontsize = 25)
+    fig.text(0.50, 0.86, f"False Positive Rate was {false_positives}", ha = "center", va = "center", fontsize = 22)
+    # fig.text(0.75, 0.85, "False Positives", ha = "center", va = "center", fontsize = 18)
 
     # Adjust layout to prevent overlap
     plt.tight_layout(rect=[0, 0, 1, 0.9])
